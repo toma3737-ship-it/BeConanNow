@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17212b">
+  <meta name="description" content="منصة تحقيقات عربية تفاعلية — افحص الأدلة، اربط الوقائع، واكتشف الحقيقة.">
+  <title>ملف 017 | منصة التحقيقات</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="film-grain" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="#home" aria-label="العودة إلى الرئيسية">
+      <span class="brand-mark">م</span>
+      <span><strong>مَحضر</strong><small>أرشيف التحقيقات</small></span>
+    </a>
+    <nav class="main-nav" aria-label="التنقل الرئيسي">
+      <a class="active" href="#home">الرئيسية</a>
+      <a href="#cases">مكتبة القضايا</a>
+      <a href="#how">كيف تلعب؟</a>
+    </nav>
+    <button class="button button-outline top-cta" id="resumeBtn">متابعة التحقيق <span aria-hidden="true">←</span></button>
+    <button class="menu-toggle" id="menuToggle" aria-label="فتح القائمة" aria-expanded="false">☰</button>
+  </header>
+
+  <main id="home">
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="live-dot"></span> أرشيف القضايا المفتوحة <span class="eyebrow-line"></span> العدد ٠١</div>
+        <h1>الحقيقة لا تختبئ.<br><em>إنها تنتظر من يربط الأدلة.</em></h1>
+        <p class="hero-text">افتح الملف، دقّق في التفاصيل، واختبر قدرتك على كشف ما حدث فعلًا. كل وثيقة قد تغيّر مجرى التحقيق.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#cases">ابدأ التحقيق <span aria-hidden="true">←</span></a>
+          <a class="text-link" href="#how">اكتشف طريقة اللعب <span aria-hidden="true">↙</span></a>
+        </div>
+        <div class="hero-stats">
+          <div><strong>٠٣</strong><span>قضايا تجريبية</span></div>
+          <div><strong>١٥–٤٥</strong><span>دقيقة للتحقيق</span></div>
+          <div><strong>مجاني</strong><span>ابدأ دون حساب</span></div>
+        </div>
+      </div>
+      <div class="hero-art" aria-label="تصميم توضيحي لملف تحقيق">
+        <div class="redacted-stamp">سري للغاية</div>
+        <div class="folder-back"></div>
+        <article class="case-paper">
+          <div class="paper-top"><span>قسم الجرائم الغامضة</span><span>ملف رقم 017</span></div>
+          <div class="paper-rule"></div>
+          <div class="case-photo"><div class="moon"></div><div class="window-shape"></div><div class="table-shape"></div><div class="evidence-pin pin-one">أ</div><div class="evidence-pin pin-two">ب</div></div>
+          <div class="paper-caption">محضر معاينة أولي — نسخة للمحقق</div>
+          <h3>ليلة في البيت الأزرق</h3>
+          <p class="paper-lines">عُثر على الغرفة مغلقة من الداخل، لكن ساعة الحائط توقفت قبل اكتشاف الحادث بوقت غير معلوم.</p>
+          <div class="paper-bottom"><span>قسم الأدلة الجنائية</span><span class="paper-number">017 / 24</span></div>
+        </article>
+        <div class="floating-note note-top"><span class="note-pin"></span><small>دليل رقم ٠٤</small><strong>توقيت غير متطابق</strong></div>
+        <div class="floating-note note-bottom"><span class="note-check">✓</span><small>ملاحظة المحقق</small><strong>راجع شهادة الحارس</strong></div>
+        <span class="crosshair crosshair-one">+</span><span class="crosshair crosshair-two">+</span>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="مبدأ التحقيق"><div class="ticker-inner"><span>لا تتسرع في الحكم</span><i>✳</i><span>كل تفصيل له وزن</span><i>✳</i><span>الاستنتاج يحتاج دليلًا</span><i>✳</i><span>لا تتسرع في الحكم</span><i>✳</i><span>كل تفصيل له وزن</span><i>✳</i></div></section>
+
+    <section class="section wrap" id="cases">
+      <div class="section-heading">
+        <div><div class="eyebrow">اختر ملفك التالي</div><h2>القضايا <em>المتاحة</em></h2><p>لكل قضية حكاية، ولكل حكاية تفاصيل لا تظهر من النظرة الأولى.</p></div>
+        <div class="case-controls"><label class="search-box"><span aria-hidden="true">⌕</span><input id="caseSearch" type="search" placeholder="ابحث عن قضية..." aria-label="ابحث عن قضية"></label><select id="difficultyFilter" aria-label="تصفية حسب الصعوبة"><option value="all">كل المستويات</option><option value="سهل">سهل</option><option value="متوسط">متوسط</option><option value="صعب">صعب</option></select></div>
+      </div>
+      <div class="case-grid" id="caseGrid" aria-live="polite"></div>
+      <p class="demo-note"><span>ⓘ</span> هذه قضايا خيالية تجريبية صُممت لاختبار تجربة اللعب، وليست ملفات تحقيق حقيقية.</p>
+    </section>
+
+    <section class="method-section" id="how">
+      <div class="wrap method-layout">
+        <div class="method-intro"><div class="eyebrow">منهج المحقق</div><h2>لا تبحث عن المتهم فقط.<br><em>ابحث عمّا لا يستقيم.</em></h2><p>التحقيق الجيد ليس تخمينًا؛ إنه قراءة متأنية، ومقارنة للشهادات، وربط بين الوقائع.</p></div>
+        <div class="method-steps">
+          <article><span class="step-no">01</span><div><h3>افتح الملف</h3><p>اقرأ البلاغ وتعرّف على الأشخاص والمكان والظروف.</p></div><span class="step-icon">▤</span></article>
+          <article><span class="step-no">02</span><div><h3>افحص الأدلة</h3><p>قارن المستندات والشهادات، وسجّل ما يثير الشك.</p></div><span class="step-icon">⌕</span></article>
+          <article><span class="step-no">03</span><div><h3>قدّم استنتاجك</h3><p>اختر تفسيرك وادعمه بأسباب، ثم اكشف الحل وقارن تحليلك.</p></div><span class="step-icon">✓</span></article>
+        </div>
+      </div>
+    </section>
+    <section class="closing wrap"><div class="closing-symbol">م</div><div><div class="eyebrow">ملفك بانتظارك</div><h2>هل تملك عين المحقق؟</h2><p>ابدأ بقضية واحدة. الحقيقة تبدأ بسؤال صحيح.</p></div><a class="button button-primary" href="#cases">تصفّح القضايا <span aria-hidden="true">←</span></a></section>
+  </main>
+  <footer class="footer"><div class="wrap footer-inner"><span>مَحضر — أرشيف التحقيقات</span><span>نسخة تجريبية أولى · 2026</span><a href="#home">العودة إلى الأعلى ↑</a></div></footer>
+
+  <dialog class="case-dialog" id="caseDialog" aria-labelledby="dialogTitle">
+    <div class="dialog-head"><div class="dialog-kicker"><span class="live-dot"></span><span id="dialogCaseNo">ملف رقم 017</span><span class="status-label">قيد التحقيق</span></div><button class="icon-button" id="closeDialog" aria-label="إغلاق الملف">×</button></div>
+    <div class="dialog-content" id="dialogContent"></div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
