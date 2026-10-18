@@ -66,8 +66,12 @@ begin
   from public.suspects s
   where s.id = v_correct_id and s.case_id = p_case_id;
 
+  -- لا تكشف اسم المشتبه الصحيح أو التفسير عند الإجابة الخاطئة.
   return query
-  select (p_suspect_id = v_correct_id), coalesce(v_correct_name, ''), coalesce(v_explanation, '');
+  select
+    (p_suspect_id = v_correct_id),
+    case when p_suspect_id = v_correct_id then coalesce(v_correct_name, '') else '' end,
+    case when p_suspect_id = v_correct_id then coalesce(v_explanation, '') else '' end;
 end;
 $$;
 
