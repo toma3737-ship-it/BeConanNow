@@ -1,4 +1,8 @@
 {
+  "name": "beconannow",
+  "private": true,
+  "version": "1.0.0",
+  "description": "BeConanNow static site with Supabase integration",
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0"
   }
