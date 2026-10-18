@@ -77,3 +77,54 @@ $$;
 
 revoke all on function public.submit_case_answer(uuid, uuid) from public;
 grant execute on function public.submit_case_answer(uuid, uuid) to anon, authenticated;
+
+
+-- صلاحيات إدارة القضايا: هذه السياسات تسمح للحسابات الموجودة في admin_users
+-- بإنشاء القضايا وتعديلها وحذفها وإدارة عناصرها التابعة.
+create or replace function public.is_current_user_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.admin_users au
+    where au.user_id = auth.uid()
+  );
+$$;
+revoke all on function public.is_current_user_admin() from public;
+grant execute on function public.is_current_user_admin() to authenticated;
+
+drop policy if exists bcn_admin_manage_cases on public.cases;
+create policy bcn_admin_manage_cases on public.cases
+for all to authenticated
+using (public.is_current_user_admin())
+with check (public.is_current_user_admin());
+
+drop policy if exists bcn_admin_manage_suspects on public.suspects;
+create policy bcn_admin_manage_suspects on public.suspects
+for all to authenticated
+using (public.is_current_user_admin())
+with check (public.is_current_user_admin());
+
+drop policy if exists bcn_admin_manage_evidence on public.evidence;
+create policy bcn_admin_manage_evidence on public.evidence
+for all to authenticated
+using (public.is_current_user_admin())
+with check (public.is_current_user_admin());
+
+drop policy if exists bcn_admin_manage_hints on public.hints;
+create policy bcn_admin_manage_hints on public.hints
+for all to authenticated
+using (public.is_current_user_admin())
+with check (public.is_current_user_admin());
+
+drop policy if exists bcn_admin_manage_case_solutions on public.case_solutions;
+create policy bcn_admin_manage_case_solutions on public.case_solutions
+for all to authenticated
+using (public.is_current_user_admin())
+with check (public.is_current_user_admin());
+
+-- حدّث مخبأ مخطط PostgREST حتى تظهر الدالة للواجهة مباشرة.
+notify pgrst, 'reload schema';

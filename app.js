@@ -17,6 +17,7 @@ const dialogContent = $('#dialogContent');
 const toast = $('#toast');
 let currentCase = null;
 let hintCount = 0;
+let answerSubmitted = false;
 let toastTimer;
 const progressKey = 'mahder-demo-progress-v1';
 
@@ -41,7 +42,7 @@ function renderCases(){
 }
 function openCase(id){
   currentCase=cases.find(c=>c.id===id);if(!currentCase)return;hintCount=0;
-  const c=currentCase;const progress=getProgress();
+  const c=currentCase;const progress=getProgress();answerSubmitted=false;
   const hintOptions=c.hints.map((_,i)=>`<option value="${i}">التلميح ${['الأول','الثاني','الثالث'][i] || (i+1)} — خصم ${(c.hintCosts?.[i] ?? [5,10,15][i] ?? 0)} نقاط</option>`).join('');
   dialogContent.innerHTML=`
     <div class="dialog-title-row"><div><div class="eyebrow">${escapeHTML(c.category)} · ${escapeHTML(c.difficulty)} · ${escapeHTML(c.duration)}</div><h2 id="dialogTitle">${escapeHTML(c.title)}</h2><p>اقرأ الملف بعناية. استخدم الأدلة لبناء تفسيرك، ولا تكشف الحل قبل تقديم إجابتك.</p></div><div class="case-number-large">${escapeHTML(c.id)}</div></div>
@@ -57,8 +58,8 @@ function openCase(id){
   $('#dialogCaseNo').textContent=`ملف رقم ${escapeHTML(c.id)}`;
   $('#useHint').addEventListener('click',useHint);
   $('#submitAnswer').addEventListener('click',submitAnswer);
-  $('#revealSolution').addEventListener('click',()=>{if(!$('#answerResult').classList.contains('visible')){showToast('ثبّت إجابتك أولًا، ثم سيظهر الحل.');return;} $('#solutionPanel').classList.add('visible');$('#solutionPanel').scrollIntoView({behavior:'smooth',block:'nearest'});});
-  $('#resetCase').addEventListener('click',()=>{if(confirm('هل تريد مسح إجابتك الحالية وإعادة المحاولة؟')){ $('#answerSelect').value='';$('#reasoning').value='';$('#answerResult').classList.remove('visible');$('#solutionPanel').classList.remove('visible');hintCount=0;$('#hintOutput').classList.remove('visible');showToast('تمت إعادة ضبط نموذج الإجابة.');}});
+  $('#revealSolution').addEventListener('click',()=>{if(!answerSubmitted){showToast('لم ينجح تثبيت الإجابة بعد. راجع الرسالة أسفل نموذج الإجابة ثم حاول مجددًا.');$('#answerSelect').focus();return;} $('#solutionPanel').classList.add('visible');$('#solutionPanel').scrollIntoView({behavior:'smooth',block:'nearest'});});
+  $('#resetCase').addEventListener('click',()=>{if(confirm('هل تريد مسح إجابتك الحالية وإعادة المحاولة؟')){ $('#answerSelect').value='';$('#reasoning').value='';$('#answerResult').classList.remove('visible');$('#solutionPanel').classList.remove('visible');answerSubmitted=false;hintCount=0;$('#hintOutput').classList.remove('visible');showToast('تمت إعادة ضبط نموذج الإجابة.');}});
   caseDialog.showModal();document.body.classList.add('dialog-open');
 }
 function useHint(){
@@ -72,15 +73,16 @@ function useHint(){
 }
 async function submitAnswer(){
   const c=currentCase;const selectedSuspectId=$('#answerSelect').value;const reasoning=$('#reasoning').value.trim();const result=$('#answerResult');
-  if(!selectedSuspectId){showToast('اختر استنتاجًا قبل تثبيت الإجابة.');$('#answerSelect').focus();return;}
-  if(reasoning.length<8){showToast('أضف تعليلًا قصيرًا يوضح سبب اختيارك.');$('#reasoning').focus();return;}
-  if(!supabase || !c.dbId){showToast('اتصال قاعدة البيانات غير مُعدّ بعد. راجع ملف supabase-config.js.');return;}
+  if(!selectedSuspectId){result.textContent='اختر اسم المشتبه به أولًا، ثم ثبّت الإجابة.';result.classList.add('visible');showToast('اختر استنتاجًا قبل تثبيت الإجابة.');$('#answerSelect').focus();return;}
+  if(reasoning.length<8){result.textContent='اكتب تعليلًا من 8 أحرف على الأقل حتى تُثبّت الإجابة.';result.classList.add('visible');showToast('أضف تعليلًا قصيرًا يوضح سبب اختيارك.');$('#reasoning').focus();return;}
+  if(!supabase || !c.dbId){result.textContent='تعذر الاتصال بقاعدة البيانات أو أن القضية لا تحمل معرّفًا صالحًا.';result.classList.add('visible');showToast('اتصال قاعدة البيانات غير مُعدّ بعد. راجع ملف supabase-config.js.');return;}
   const submitButton=$('#submitAnswer');submitButton.disabled=true;submitButton.textContent='جارٍ مراجعة الإجابة…';
   try {
     const {data,error}=await supabase.rpc('submit_case_answer',{p_case_id:c.dbId,p_suspect_id:selectedSuspectId});
     if(error) throw error;
     const resultRow=Array.isArray(data)?data[0]:data;
-    const correct=Boolean(resultRow?.correct);
+    if(!resultRow || typeof resultRow.correct!=='boolean')throw new Error('لم تُرجع قاعدة البيانات نتيجة تحقق مفهومة. أعد تشغيل ملف supabase-setup.sql في SQL Editor.');
+    answerSubmitted=true;const correct=Boolean(resultRow.correct);
     result.innerHTML=`<strong>${correct?'إجابة صحيحة!':'إجابة غير مطابقة للحل المرجعي'}</strong><p>${correct?'أحسنت؛ لقد وصلت إلى الاستنتاج الصحيح.':'راجع تعليلك وقارن بين الأدلة قبل الانتقال إلى قضية أخرى.'}</p><p>النقاط المعروضة تجريبية وليست نتيجة تنافسية موثّقة على الخادم.</p>`;
     result.classList.add('visible');
     $('#solutionText').textContent=resultRow?.explanation || 'لا يتوفر تفسير منشور لهذه القضية بعد.';
@@ -88,7 +90,7 @@ async function submitAnswer(){
     $('#solutionPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
     const p=getProgress();if(!p.completed.includes(c.id))p.completed.push(c.id);saveProgress(p);renderCases();
   } catch(error) {
-    console.error(error);showToast('تعذر التحقق من الإجابة. تأكد من نشر وظيفة submit-answer وإعداد قاعدة البيانات.');
+    console.error(error);result.textContent='لم يتم تثبيت الإجابة. '+(error?.message||'تحقق من اتصال قاعدة البيانات وصلاحيات الوظيفة.');result.classList.add('visible');showToast('تعذر تثبيت الإجابة. اقرأ الرسالة الظاهرة أسفل نموذج الإجابة.');
   } finally {submitButton.disabled=false;submitButton.textContent='تثبيت الإجابة ومراجعتها';}
 }
 $('#closeDialog').addEventListener('click',()=>{caseDialog.close();document.body.classList.remove('dialog-open');});
