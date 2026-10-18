@@ -84,7 +84,7 @@ function renderCases(){
   if(!filtered.length){caseGrid.innerHTML='<div class="empty-state">لم نعثر على قضية تطابق بحثك. جرّب كلمة أخرى أو غيّر مستوى الصعوبة.</div>';return;}
   const progress=getProgress();
   caseGrid.innerHTML=filtered.map(c=>`<article class="case-card">
-    <div class="card-visual ${c.visual}"><span class="visual-file">ملف رقم ${c.id}</span><span class="visual-number">${c.id}</span><span class="visual-seal">م</span></div>
+    <div class="card-visual ${c.visual}"><span class="visual-file">ملف رقم ${c.id}</span><span class="visual-number">${c.id}</span><span class="visual-seal">BCN</span></div>
     <div class="card-body"><div class="card-meta"><span>${c.category}</span><span class="difficulty ${c.difficulty==='صعب'?'hard':''}">${c.difficulty}</span></div>
       <h3>${c.title}</h3><p>${c.summary}</p>
       <div class="card-footer"><span>${c.duration}${progress.completed.includes(c.id)?' · تم التحقيق ✓':''}</span><button type="button" data-open-case="${c.id}">فتح الملف <span>←</span></button></div>
