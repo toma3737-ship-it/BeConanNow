@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#081326">
   <meta name="description" content="BeConanNow — لعبة تحقيق عربية تفاعلية. افحص الأدلة، اربط الوقائع، واكتشف الحقيقة.">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20261020-1"><title>BeConanNow | عِش دور المحقق</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20261020-bcn2"><title>BeConanNow | عِش دور المحقق</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -74,9 +74,10 @@
     <section class="section wrap" id="cases">
       <div class="section-heading">
         <div><div class="eyebrow">لوحة القضايا</div><h2>اختر <em>ملفك التالي</em></h2><p>كل قضية عالم صغير من القرائن والتناقضات. مهمتك أن تكتشف ما لا يستقيم.</p></div>
-        <div class="case-controls"><label class="search-box"><span aria-hidden="true">⌕</span><input id="caseSearch" type="search" placeholder="ابحث عن قضية..." aria-label="ابحث عن قضية"></label><select id="difficultyFilter" aria-label="تصفية حسب الصعوبة"><option value="all">كل المستويات</option><option value="سهل">سهل</option><option value="متوسط">متوسط</option><option value="صعب">صعب</option></select></div>
+        <div class="case-controls"><label class="search-box"><span aria-hidden="true">⌕</span><input id="caseSearch" type="search" placeholder="ابحث عن قضية..." aria-label="ابحث عن قضية"></label><select id="difficultyFilter" aria-label="تصفية حسب الصعوبة"><option value="all">كل المستويات</option><option value="سهل">سهل</option><option value="متوسط">متوسط</option><option value="صعب">صعب</option></select><select id="caseCategoryFilter" aria-label="تصفية حسب التصنيف"><option value="all">كل التصنيفات</option></select><select id="caseSort" aria-label="ترتيب القضايا"><option value="newest">الأحدث أولًا</option><option value="oldest">الأقدم أولًا</option><option value="title">العنوان أبجديًا</option><option value="difficulty">الصعوبة</option></select></div>
       </div>
       <div class="case-grid" id="caseGrid" aria-live="polite"><div class="empty-state">جارٍ تشغيل مكتبة القضايا…</div></div>
+      <nav id="casePagination" class="case-pagination" aria-label="صفحات مكتبة القضايا"></nav>
       <p id="appDiagnostic" role="status" style="margin:10px 0;color:#9aa6b8;font-size:13px;direction:rtl">فحص تشغيل المكتبة: بدأ الفحص…</p>
       <p class="demo-note"><span>ⓘ</span> هذه قضايا خيالية تجريبية صُممت لاختبار تجربة اللعب، وليست ملفات تحقيق حقيقية.</p>
     </section>
@@ -142,7 +143,7 @@
   <script type="module">
     const out = document.getElementById('appDiagnostic');
     try {
-      await import('./app.js?v=20261020-diagnostic2');
+      await import('./app.js?v=20261020-library-localplay2');
       if (out) out.textContent = 'نجح تشغيل app.js. إذا بقيت القضايا غير ظاهرة، انتظر لحظة واقرأ الرسالة داخل مساحة المكتبة أعلاه.';
     } catch (error) {
       console.error('App module failed to start:', error);

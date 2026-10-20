@@ -1,9 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect x="2" y="2" width="60" height="60" rx="13" fill="#081326" stroke="#aeb8c6" stroke-width="2"/>
-  <path d="M14 18h20l5 5v22H14z" fill="#13243b" stroke="#aeb8c6" stroke-width="1.8" stroke-linejoin="round"/>
-  <path d="M34 18v6h5" fill="none" stroke="#aeb8c6" stroke-width="1.6"/>
-  <path d="M19 29h11M19 34h8" stroke="#aeb8c6" stroke-width="1.8" stroke-linecap="round"/>
-  <circle cx="39" cy="36" r="10" fill="#081326" stroke="#d7dde5" stroke-width="3"/>
-  <path d="M46.5 43.5 54 51" stroke="#d7dde5" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="39" cy="36" r="5.2" fill="#263b56"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#101d35"/><rect x="6" y="6" width="52" height="52" rx="5" fill="none" stroke="#b49a6b" stroke-width="1.4"/><rect x="10" y="10" width="44" height="44" rx="3" fill="none" stroke="#b49a6b" stroke-opacity=".5"/><text x="32" y="39" text-anchor="middle" font-family="Georgia,serif" font-size="20" font-weight="700" letter-spacing="-1" fill="#b49a6b">BCN</text></svg>

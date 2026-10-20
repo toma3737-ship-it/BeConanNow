@@ -53,20 +53,45 @@ function getProgress(){
 function saveProgress(progress){try{localStorage.setItem(progressKey,JSON.stringify(progress));}catch{/* local saving may be unavailable */}}
 function showToast(message){toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
 function renderEvidenceMedia(e){if(/^image\//.test(e.mediaType))return `<a href="${escapeHTML(e.mediaUrl)}" target="_blank" rel="noopener"><img src="${escapeHTML(e.mediaUrl)}" alt="${escapeHTML(e.title)}" loading="lazy" style="max-width:100%;max-height:360px;border-radius:10px"></a>`;if(/^audio\//.test(e.mediaType))return `<audio controls preload="none" src="${escapeHTML(e.mediaUrl)}"></audio>`;if(/^video\//.test(e.mediaType))return `<video controls preload="metadata" src="${escapeHTML(e.mediaUrl)}" style="max-width:100%;max-height:360px"></video>`;return `<p><a href="${escapeHTML(e.mediaUrl)}" target="_blank" rel="noopener">فتح الملف المرفق</a></p>`;}
+let casePage = 1;
+const casesPerPage = 12;
+function refreshCategoryOptions(){
+  const select=$('#caseCategoryFilter'); if(!select) return;
+  const current=select.value;
+  const categories=[...new Set(cases.map(c=>c.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  select.innerHTML='<option value="all">كل التصنيفات</option>'+categories.map(c=>`<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('');
+  if(categories.includes(current)) select.value=current;
+}
 function renderCases(){
+  if(!caseGrid) return;
   const query=$('#caseSearch').value.trim().toLowerCase();
   const difficulty=$('#difficultyFilter').value;
-  const filtered=cases.filter(c=>(difficulty==='all'||c.difficulty===difficulty)&&`${c.title} ${c.category} ${c.summary} ${c.briefing} ${c.id}`.replace(/<[^>]*>/g,'').toLowerCase().includes(query));
-  if(!filtered.length){caseGrid.innerHTML='<div class="empty-state">لم نعثر على قضية تطابق بحثك. جرّب كلمة أخرى أو غيّر مستوى الصعوبة.</div>';return;}
+  const category=$('#caseCategoryFilter')?.value || 'all';
+  const sort=$('#caseSort')?.value || 'newest';
+  let filtered=cases.filter(c=>(difficulty==='all'||c.difficulty===difficulty)&&(category==='all'||c.category===category)&&`${c.title} ${c.category} ${c.summary} ${c.briefing} ${c.id}`.replace(/<[^>]*>/g,'').toLowerCase().includes(query));
+  filtered.sort((a,b)=>{
+    if(sort==='title') return a.title.localeCompare(b.title,'ar');
+    if(sort==='difficulty') return ({'سهل':1,'متوسط':2,'صعب':3}[a.difficulty]||9)-({'سهل':1,'متوسط':2,'صعب':3}[b.difficulty]||9);
+    const ad=Date.parse(a.createdAt||'')||0, bd=Date.parse(b.createdAt||'')||0;
+    return sort==='oldest' ? ad-bd : bd-ad;
+  });
+  const pages=Math.max(1,Math.ceil(filtered.length/casesPerPage));
+  casePage=Math.min(Math.max(1,casePage),pages);
+  if(!filtered.length){caseGrid.innerHTML='<div class="empty-state">لم نعثر على قضية تطابق بحثك. جرّب كلمة أخرى أو غيّر عوامل التصفية.</div>';$('#casePagination').innerHTML='';return;}
+  const visible=filtered.slice((casePage-1)*casesPerPage,casePage*casesPerPage);
   const progress=getProgress();
-  caseGrid.innerHTML=filtered.map(c=>`<article class="case-card">
-    <div class="card-visual ${c.visual}"><span class="visual-file">ملف رقم ${escapeHTML(c.id)}</span><span class="visual-number">${escapeHTML(c.id)}</span><span class="visual-seal">BCN</span></div>
+  caseGrid.innerHTML=visible.map(c=>`<article class="case-card">
+    <div class="card-visual ${escapeHTML(c.visual)}"><span class="visual-file">ملف رقم ${escapeHTML(c.id)}</span><span class="visual-number">${escapeHTML(c.id)}</span><span class="visual-seal">BCN</span></div>
     <div class="card-body"><div class="card-meta"><span>${escapeHTML(c.category)}</span><span class="difficulty ${c.difficulty==='صعب'?'hard':''}">${escapeHTML(c.difficulty)}</span></div>
       <h3>${escapeHTML(c.title)}</h3><p>${escapeHTML(c.summary)}</p>
       <div class="card-footer"><span>${escapeHTML(c.duration)}${progress.completed.includes(c.id)?' · تم التحقيق ✓':''}</span><button type="button" data-open-case="${escapeHTML(c.id)}">فتح الملف <span>←</span></button></div>
     </div></article>`).join('');
   caseGrid.querySelectorAll('[data-open-case]').forEach(button=>button.addEventListener('click',()=>openCase(button.dataset.openCase)));
+  const pager=$('#casePagination');
+  pager.innerHTML=`<span class="pagination-info">${filtered.length} قضية · صفحة ${casePage} من ${pages}</span><div class="pagination-buttons"><button type="button" data-page="prev" ${casePage===1?'disabled':''}>السابق</button>${Array.from({length:pages},(_,i)=>i+1).filter(n=>n===1||n===pages||Math.abs(n-casePage)<=1).map(n=>`<button type="button" data-page="${n}" class="${n===casePage?'active':''}" aria-current="${n===casePage?'page':'false'}">${n}</button>`).join('')}<button type="button" data-page="next" ${casePage===pages?'disabled':''}>التالي</button></div>`;
+  pager.querySelectorAll('[data-page]').forEach(button=>button.addEventListener('click',()=>{const value=button.dataset.page;casePage=value==='prev'?casePage-1:value==='next'?casePage+1:Number(value);renderCases();$('#cases').scrollIntoView({behavior:'smooth',block:'start'});}));
 }
+
 function openCase(id){
   currentCase=cases.find(c=>c.id===id);if(!currentCase)return;hintCount=0;
   const c=currentCase;const progress=getProgress();answerSubmitted=false;currentAnswerType=c.answerType||'suspect';
@@ -127,7 +152,7 @@ async function submitAnswer(){
 $('#closeDialog').addEventListener('click',()=>{caseDialog.close();document.body.classList.remove('dialog-open');});
 caseDialog.addEventListener('click',event=>{if(event.target===caseDialog){caseDialog.close();document.body.classList.remove('dialog-open');}});
 caseDialog.addEventListener('close',()=>document.body.classList.remove('dialog-open'));
-$('#caseSearch').addEventListener('input',renderCases);$('#difficultyFilter').addEventListener('change',renderCases);
+$('#caseSearch').addEventListener('input',()=>{casePage=1;renderCases();});$('#difficultyFilter').addEventListener('change',()=>{casePage=1;renderCases();});$('#caseCategoryFilter')?.addEventListener('change',()=>{casePage=1;renderCases();});$('#caseSort')?.addEventListener('change',()=>{casePage=1;renderCases();});
 window.addEventListener('pageshow',()=>{renderCases();});
 $('#resumeBtn').addEventListener('click',()=>{const p=getProgress();const next=cases.find(c=>!p.completed.includes(c.id))||cases[0];openCase(next.id);});
 async function initializeCases(){
@@ -165,7 +190,7 @@ async function initializeCases(){
       const rowEvidence=(evidenceByCase[row.id]||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
       const rowHints=(hintsByCase[row.id]||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
       return {
-        id:row.slug || row.id, dbId:row.id, title:row.title || 'قضية دون عنوان', category:row.category || 'لغز مغلق', answerType:row.answer_type||'suspect',
+        id:row.slug || row.id, dbId:row.id, createdAt:row.created_at, title:row.title || 'قضية دون عنوان', category:row.category || 'لغز مغلق', answerType:row.answer_type||'suspect',
         difficulty:row.difficulty==='easy'?'سهل':row.difficulty==='hard'?'صعب':row.difficulty==='medium'?'متوسط':row.difficulty || 'متوسط',
         duration:`${row.estimated_minutes || 15} دقيقة`, visual:row.visual || 'visual-night', summary:row.summary || '',
         briefing:row.briefing || '', victim:row.victim || '', timeline:row.timeline || '',
@@ -175,6 +200,7 @@ async function initializeCases(){
         hintCosts:rowHints.map(h=>h.points_cost||0)
       };
     });
+    refreshCategoryOptions();
     renderCases();
     if(childWarnings.length){
       console.warn('Some case details could not be loaded:',childWarnings.join(', '));
