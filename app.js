@@ -106,23 +106,56 @@ async function initializeCases(){
     caseGrid.innerHTML='<div class="empty-state">أكمل إعداد الاتصال بقاعدة البيانات في ملف supabase-config.js لعرض القضايا المنشورة.</div>';
     return;
   }
-  const {data,error}=await supabase.from('cases').select(`
-    id, slug, title, category, answer_type, difficulty, estimated_minutes, visual, summary, briefing, victim, timeline,
-    suspects(id, name, role, description, motive),
-    evidence(id, evidence_number, title, description, sort_order, media_url, media_type),
-    hints(id, content, points_cost, sort_order)
-  `).eq('status','published').order('created_at',{ascending:false});
-  if(error){console.error('Failed to load published cases:',error);caseGrid.innerHTML=`<div class="empty-state">تعذر تحميل القضايا المنشورة: ${escapeHTML(error.message||'خطأ غير معروف')}. إذا أضفت أعمدة جديدة مؤخرًا، شغّل ملف supabase-setup.sql المحدّث.</div>`;return;}
-  cases=(data||[]).map(row=>({
-    id:row.slug || row.id, dbId:row.id, title:row.title, category:row.category || 'لغز مغلق', answerType:row.answer_type||'suspect',
-    difficulty:row.difficulty==='easy'?'سهل':row.difficulty==='hard'?'صعب':row.difficulty==='medium'?'متوسط':row.difficulty,
-    duration:`${row.estimated_minutes || 15} دقيقة`, visual:row.visual || 'visual-night', summary:row.summary || '',
-    briefing:row.briefing || '', victim:row.victim || '', timeline:row.timeline || '',
-    suspects:(row.suspects||[]).map(s=>({id:s.id,name:s.name,role:s.role||'',detail:s.description||s.motive||''})),
-    evidence:(row.evidence||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map((e,i)=>({n:e.evidence_number||String(i+1).padStart(2,'0'),title:e.title,detail:e.description||'',mediaUrl:e.media_url||'',mediaType:e.media_type||''})),
-    hints:(row.hints||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(h=>h.content),
-    hintCosts:(row.hints||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(h=>h.points_cost||0)
-  }));
-  renderCases();
+  caseGrid.innerHTML='<div class="empty-state">جارٍ تحميل القضايا المنشورة…</div>';
+  try {
+    // Fetch cases separately from related tables. This avoids a PostgREST embedded-relationship
+    // error from hiding every case when the schema cache or a foreign-key relationship differs.
+    const {data:rows,error}=await supabase.from('cases').select('*').eq('status','published').order('created_at',{ascending:false});
+    if(error) throw error;
+    if(!rows || rows.length===0){
+      cases=[];
+      caseGrid.innerHTML='<div class="empty-state">لم تُرجع قاعدة البيانات أي قضايا منشورة. تحقّق من أن حالة القضية «منشورة» في لوحة الإدارة وأن سياسات القراءة العامة مطبّقة على جدول cases.</div>';
+      return;
+    }
+    const ids=rows.map(r=>r.id).filter(Boolean);
+    const [suspectResult,evidenceResult,hintResult]=await Promise.all([
+      supabase.from('suspects').select('*').in('case_id',ids),
+      supabase.from('evidence').select('*').in('case_id',ids),
+      supabase.from('hints').select('*').in('case_id',ids)
+    ]);
+    // The case cards should remain visible even if a related-content table has a policy/schema issue.
+    const childWarnings=[];
+    if(suspectResult.error){console.error('Could not load suspects:',suspectResult.error);childWarnings.push('الأشخاص');}
+    if(evidenceResult.error){console.error('Could not load evidence:',evidenceResult.error);childWarnings.push('الأدلة');}
+    if(hintResult.error){console.error('Could not load hints:',hintResult.error);childWarnings.push('التلميحات');}
+    const groupByCase=(items=[])=>items.reduce((acc,item)=>{(acc[item.case_id] ||= []).push(item);return acc;},{});
+    const suspectsByCase=groupByCase(suspectResult.data||[]);
+    const evidenceByCase=groupByCase(evidenceResult.data||[]);
+    const hintsByCase=groupByCase(hintResult.data||[]);
+    cases=rows.map(row=>{
+      const rowSuspects=(suspectsByCase[row.id]||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+      const rowEvidence=(evidenceByCase[row.id]||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+      const rowHints=(hintsByCase[row.id]||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+      return {
+        id:row.slug || row.id, dbId:row.id, title:row.title || 'قضية دون عنوان', category:row.category || 'لغز مغلق', answerType:row.answer_type||'suspect',
+        difficulty:row.difficulty==='easy'?'سهل':row.difficulty==='hard'?'صعب':row.difficulty==='medium'?'متوسط':row.difficulty || 'متوسط',
+        duration:`${row.estimated_minutes || 15} دقيقة`, visual:row.visual || 'visual-night', summary:row.summary || '',
+        briefing:row.briefing || '', victim:row.victim || '', timeline:row.timeline || '',
+        suspects:rowSuspects.map(s=>({id:s.id,name:s.name||'شخص غير مسمّى',role:s.role||'',detail:s.description||s.motive||''})),
+        evidence:rowEvidence.map((e,i)=>({n:e.evidence_number||String(i+1).padStart(2,'0'),title:e.title||'دليل',detail:e.description||'',mediaUrl:e.media_url||'',mediaType:e.media_type||''})),
+        hints:rowHints.map(h=>h.content||''),
+        hintCosts:rowHints.map(h=>h.points_cost||0)
+      };
+    });
+    renderCases();
+    if(childWarnings.length){
+      console.warn('Some case details could not be loaded:',childWarnings.join(', '));
+      const warning=document.createElement('div');warning.className='empty-state';warning.textContent=`ظهرت القضايا، لكن تعذّر تحميل بعض التفاصيل (${childWarnings.join('، ')}). راجع صلاحيات القراءة لهذه الجداول في Supabase.`;
+      caseGrid.prepend(warning);
+    }
+  } catch(error) {
+    console.error('Failed to load published cases:',error);
+    caseGrid.innerHTML=`<div class="empty-state">تعذّر جلب القضايا من Supabase: ${escapeHTML(error?.message||String(error))}. تأكد من مشروع Supabase وإعدادات القراءة العامة، ثم حدّث الصفحة.</div>`;
+  }
 }
 initializeCases();
