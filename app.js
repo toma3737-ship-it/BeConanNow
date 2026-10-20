@@ -60,8 +60,8 @@ function openCase(id){
   $('#dialogCaseNo').textContent=`ملف رقم ${escapeHTML(c.id)}`;
   $('#useHint').addEventListener('click',useHint);
   $('#submitAnswer').addEventListener('click',submitAnswer);
-  $('#revealSolution').addEventListener('click',()=>{if(!answerSubmitted){showToast('لم ينجح تثبيت الإجابة بعد. راجع الرسالة أسفل نموذج الإجابة ثم حاول مجددًا.');$('#answerSelect').focus();return;} $('#solutionPanel').classList.add('visible');$('#solutionPanel').scrollIntoView({behavior:'smooth',block:'nearest'});});
-  $('#resetCase').addEventListener('click',()=>{if(confirm('هل تريد مسح إجابتك الحالية وإعادة المحاولة؟')){ $('#answerSelect').value='';$('#reasoning').value='';$('#answerResult').classList.remove('visible');$('#solutionPanel').classList.remove('visible');answerSubmitted=false;hintCount=0;$('#hintOutput').classList.remove('visible');showToast('تمت إعادة ضبط نموذج الإجابة.');}});
+  $('#revealSolution').addEventListener('click',()=>{if(!answerSubmitted){showToast('لم ينجح تثبيت الإجابة بعد. راجع الرسالة أسفل نموذج الإجابة ثم حاول مجددًا.');(currentAnswerType==='open'?$('#openAnswer'):$('#answerSelect'))?.focus();return;} $('#solutionPanel.classList.add('visible');$('#solutionPanel').scrollIntoView({behavior:'smooth',block:'nearest'});});
+  $('#resetCase').addEventListener('click',()=>{if(confirm('هل تريد مسح إجابتك الحالية وإعادة المحاولة؟')){const answerField=$('#openAnswer')||$('#answerSelect');if(answerField)answerField.value='';$('#reasoning').value='';$('#answerResult').classList.remove('visible');$('#solutionPanel').classList.remove('visible');answerSubmitted=false;hintCount=0;$('#hintOutput').classList.remove('visible');showToast('تمت إعادة ضبط نموذج الإجابة.');}});
   caseDialog.showModal();document.body.classList.add('dialog-open');
 }
 function useHint(){
@@ -99,9 +99,7 @@ $('#closeDialog').addEventListener('click',()=>{caseDialog.close();document.body
 caseDialog.addEventListener('click',event=>{if(event.target===caseDialog){caseDialog.close();document.body.classList.remove('dialog-open');}});
 caseDialog.addEventListener('close',()=>document.body.classList.remove('dialog-open'));
 $('#caseSearch').addEventListener('input',renderCases);$('#difficultyFilter').addEventListener('change',renderCases);
-window.addEventListener('pageshow',()=>{const nav=$('.main-nav');nav?.classList.remove('open');$('#menuToggle')?.setAttribute('aria-expanded','false');renderCases();});
-$('#menuToggle').addEventListener('click',()=>{const nav=$('.main-nav');const open=nav.classList.toggle('open');$('#menuToggle').setAttribute('aria-expanded',String(open));});
-$('.main-nav').querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{$('.main-nav').classList.remove('open');$('#menuToggle').setAttribute('aria-expanded','false');}));
+window.addEventListener('pageshow',()=>{renderCases();});
 $('#resumeBtn').addEventListener('click',()=>{const p=getProgress();const next=cases.find(c=>!p.completed.includes(c.id))||cases[0];openCase(next.id);});
 async function initializeCases(){
   if(!supabase){

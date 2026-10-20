@@ -31,3 +31,16 @@ html{background:#07101f}body{background:radial-gradient(ellipse at 50% -18%,#193
 .quote-lens:after{content:"";position:absolute;width:18px;height:48px;right:-20px;bottom:-34px;transform:rotate(-42deg);border-radius:8px;border:2px solid #b6d7e8;background:linear-gradient(90deg,#183450,#c8dbe7,#183450)}
 .quote-lens span{position:absolute;left:17px;top:17px;width:25px;height:7px;border-radius:50%;background:#fff;opacity:.65;transform:rotate(-40deg)}
 @media(max-width:620px){.hero-magnifier{width:80px;height:104px;left:13px;bottom:44px;transform:rotate(-17deg) scale(.8);transform-origin:bottom left}.conan-quote{margin-top:30px;padding:22px 20px;gap:10px;min-height:130px}.quote-content blockquote{font-size:25px}.quote-content p{font-size:9px}.quote-attribution{font-size:9px}.quote-lens{width:58px;height:58px;flex-basis:58px;border-width:4px}.quote-lens:after{width:12px;height:33px;right:-13px;bottom:-24px}.quote-lens span{left:10px;top:10px;width:17px;height:5px}}
+
+
+/* Robust mobile navigation: keep the menu above page content and reachable by touch. */
+@media (max-width: 760px) {
+  .topbar { position: sticky; z-index: 100; overflow: visible; }
+  .menu-toggle { display: inline-flex !important; position: relative; z-index: 102; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; touch-action: manipulation; cursor: pointer; }
+  .main-nav { display: none; position: absolute; top: 100%; right: 0; left: 0; z-index: 101; max-height: calc(100dvh - 80px); overflow-y: auto; background: rgba(6,19,36,.99); border: 1px solid var(--line); border-top: 1px solid rgba(255,255,255,.15); padding: 10px 18px 18px; flex-direction: column; align-items: stretch; gap: 0; box-shadow: 0 18px 35px rgba(0,0,0,.35); }
+  .main-nav.open { display: flex !important; }
+  .main-nav a { display: block; width: 100%; padding: 14px 4px; font-size: 14px; line-height: 1.5; border-bottom: 1px solid rgba(255,255,255,.12); }
+  .main-nav a:last-child { border-bottom: 0; }
+  .main-nav a.active:after { display: none; }
+  .top-cta { display: none; }
+}

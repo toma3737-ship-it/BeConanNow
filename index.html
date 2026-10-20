@@ -18,14 +18,14 @@
       <span class="brand-mark">BCN</span>
       <span><strong>BeConanNow</strong><small>عِش دور المحقق</small></span>
     </a>
-    <nav class="main-nav" aria-label="التنقل الرئيسي">
+    <nav class="main-nav" id="mainNav" aria-label="التنقل الرئيسي">
       <a class="active" href="#home">الرئيسية</a>
       <a href="#cases">مكتبة القضايا</a>
       <a href="#how">كيف تلعب؟</a>
     <a href="multiplayer.html">اللعب الجماعي</a>
     <a href="admin.html">لوحة الإدارة</a></nav>
     <button class="button button-outline top-cta" id="resumeBtn">متابعة التحقيق <span aria-hidden="true">←</span></button>
-    <button class="menu-toggle" id="menuToggle" aria-label="فتح القائمة" aria-expanded="false">☰</button>
+    <button type="button" class="menu-toggle" id="menuToggle" aria-label="فتح القائمة" aria-expanded="false" aria-controls="mainNav">☰</button>
   </header>
 
   <main id="home">
@@ -99,6 +99,33 @@
     <div class="dialog-content" id="dialogContent"></div>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    // Navigation works independently of the app module, including on mobile and after returning from another page.
+    (() => {
+      const button = document.getElementById('menuToggle');
+      const nav = document.getElementById('mainNav');
+      if (!button || !nav) return;
+      const closeMenu = () => {
+        nav.classList.remove('open');
+        button.setAttribute('aria-expanded', 'false');
+        button.setAttribute('aria-label', 'فتح القائمة');
+      };
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const opening = !nav.classList.contains('open');
+        nav.classList.toggle('open', opening);
+        button.setAttribute('aria-expanded', String(opening));
+        button.setAttribute('aria-label', opening ? 'إغلاق القائمة' : 'فتح القائمة');
+      });
+      nav.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
+      document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+      document.addEventListener('click', event => {
+        if (nav.classList.contains('open') && !nav.contains(event.target) && !button.contains(event.target)) closeMenu();
+      });
+      window.addEventListener('pageshow', closeMenu);
+    })();
+  </script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
