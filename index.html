@@ -77,6 +77,7 @@
         <div class="case-controls"><label class="search-box"><span aria-hidden="true">⌕</span><input id="caseSearch" type="search" placeholder="ابحث عن قضية..." aria-label="ابحث عن قضية"></label><select id="difficultyFilter" aria-label="تصفية حسب الصعوبة"><option value="all">كل المستويات</option><option value="سهل">سهل</option><option value="متوسط">متوسط</option><option value="صعب">صعب</option></select></div>
       </div>
       <div class="case-grid" id="caseGrid" aria-live="polite"><div class="empty-state">جارٍ تشغيل مكتبة القضايا…</div></div>
+      <p id="appDiagnostic" role="status" style="margin:10px 0;color:#9aa6b8;font-size:13px;direction:rtl">فحص تشغيل المكتبة: بدأ الفحص…</p>
       <p class="demo-note"><span>ⓘ</span> هذه قضايا خيالية تجريبية صُممت لاختبار تجربة اللعب، وليست ملفات تحقيق حقيقية.</p>
     </section>
 
@@ -126,6 +127,29 @@
       window.addEventListener('pageshow', closeMenu);
     })();
   </script>
-  <script type="module" src="app.js?v=20261020-cases-rest-fix5"></script>
+  <script>
+    // Visible diagnostics for module startup failures; does not change multiplayer or database data.
+    (() => {
+      const out = document.getElementById('appDiagnostic');
+      window.addEventListener('error', (e) => {
+        if (out && e.message) out.textContent = 'خطأ JavaScript: ' + e.message;
+      });
+      window.addEventListener('unhandledrejection', (e) => {
+        if (out) out.textContent = 'فشل تشغيل المكتبة: ' + String(e.reason?.message || e.reason || 'خطأ غير معروف');
+      });
+    })();
+  </script>
+  <script type="module">
+    const out = document.getElementById('appDiagnostic');
+    try {
+      await import('./app.js?v=20261020-diagnostic1');
+      if (out) out.textContent = 'نجح تشغيل app.js. إذا بقيت القضايا غير ظاهرة، انتظر لحظة واقرأ الرسالة داخل مساحة المكتبة أعلاه.';
+    } catch (error) {
+      console.error('App module failed to start:', error);
+      if (out) out.textContent = 'تعذّر تشغيل app.js: ' + String(error?.message || error);
+      const grid = document.getElementById('caseGrid');
+      if (grid) grid.innerHTML = '<div class="empty-state">تعذّر تشغيل ملف المكتبة. اقرأ رسالة الفحص أسفل هذه المساحة وأرسلها للدعم.</div>';
+    }
+  </script>
 </body>
 </html>
