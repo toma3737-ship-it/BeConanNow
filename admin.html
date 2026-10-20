@@ -16,6 +16,7 @@
 <div class="field"><label for="title">عنوان القضية *</label><input id="title" required maxlength="160"></div>
 <div class="field"><label for="slug">معرّف قصير بالإنجليزية *</label><input id="slug" required pattern="[a-z0-9-]+" placeholder="the-blue-house" maxlength="80"><small class="muted">حروف إنجليزية صغيرة وأرقام وشرطة فقط.</small></div>
 <div class="field"><label for="category">نوع القضية</label><input id="category" value="لغز مغلق"></div>
+<div class="field"><label for="answerType">طريقة الإجابة</label><select id="answerType"><option value="suspect">اختيار مشتبه به / شخص</option><option value="open">إجابة مفتوحة مكتوبة</option></select><small class="muted">اختر الإجابة المفتوحة للسيناريوهات، واكتشاف الأخطاء، وتحليل إفادات الشهود، ونحوها.</small></div>
 <div class="field"><label for="difficulty">الصعوبة</label><select id="difficulty"><option value="easy">سهل</option><option value="medium" selected>متوسط</option><option value="hard">صعب</option></select></div>
 <div class="field"><label for="minutes">المدة بالدقائق</label><input id="minutes" type="number" min="1" max="600" value="20" required></div>
 <div class="field"><label for="visual">نمط البطاقة</label><select id="visual"><option value="visual-night">ليلي</option><option value="visual-office">مكتب</option><option value="visual-train">قطار</option></select></div>
@@ -25,10 +26,11 @@
 <div class="field full"><label for="timeline">الخط الزمني</label><textarea id="timeline"></textarea></div>
 <div class="field"><label for="status">حالة القضية</label><select id="status"><option value="draft">مسودة</option><option value="published">منشورة</option></select></div>
 </div>
-<div class="item"><div class="row"><h2>المشتبه بهم</h2><button type="button" id="addSuspect">+ إضافة مشتبه به</button></div><div id="suspectsList"></div><div class="field"><label for="correctSuspect">المشتبه به الصحيح (الحل السري) *</label><select id="correctSuspect" required><option value="">أضف المشتبه بهم أولًا</option></select></div></div>
+<div class="item" id="suspectsSection"><div class="row"><h2>الأشخاص / المشتبه بهم (اختياري بحسب نوع القضية)</h2><button type="button" id="addSuspect">+ إضافة شخص</button></div><p class="muted tiny">يمكنك ترك هذا القسم فارغًا إذا كانت القضية لا تتطلب تحديد شخص.</p><div id="suspectsList"></div><div class="field"><label for="correctSuspect">الشخص الصحيح (يُطلب فقط عند اختيار نوع الإجابة: شخص)</label><select id="correctSuspect"><option value="">أضف الأشخاص أولًا</option></select></div></div>
 <div class="item"><div class="row"><h2>الأدلة</h2><button type="button" id="addEvidence">+ إضافة دليل</button></div><div id="evidenceList"></div></div>
 <div class="item"><div class="row"><h2>التلميحات</h2><button type="button" id="addHint">+ إضافة تلميح</button></div><div id="hintsList"></div></div>
-<div class="field full"><label for="solution">شرح الحل السري *</label><textarea id="solution" required placeholder="اشرح كيف ترتبط الأدلة بالاستنتاج الصحيح."></textarea></div>
+<div class="field full" id="expectedAnswerField"><label for="expectedAnswer">الإجابة المرجعية / السيناريو المتوقع (للإجابة المفتوحة)</label><textarea id="expectedAnswer" placeholder="اكتب الاستنتاج أو السيناريو الذي تتوقع الوصول إليه."></textarea></div>
+<div class="field full"><label for="solution">شرح الحل وتحليل الأدلة *</label><textarea id="solution" required placeholder="اشرح كيف ترتبط الأدلة بالاستنتاج الصحيح، أو لماذا يُعد هذا السيناريو هو الأقوى."></textarea></div>
 <div class="actions"><button class="primary" id="saveCaseBtn" type="submit">حفظ القضية</button><button id="cancelEditBtn" type="button" class="hidden">إلغاء التعديل</button><button type="reset">مسح النموذج</button></div>
 </form><div id="adminStatus" class="status" role="status"></div></div>
 <div class="panel"><h2>القضايا الموجودة</h2><button id="refreshCases" type="button">تحديث القائمة</button><div id="casesList" class="muted">سجّل الدخول لعرض القضايا.</div></div>

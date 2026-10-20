@@ -18,6 +18,7 @@ const toast = $('#toast');
 let currentCase = null;
 let hintCount = 0;
 let answerSubmitted = false;
+let currentAnswerType = 'suspect';
 let toastTimer;
 const progressKey = 'mahder-demo-progress-v1';
 
@@ -42,7 +43,7 @@ function renderCases(){
 }
 function openCase(id){
   currentCase=cases.find(c=>c.id===id);if(!currentCase)return;hintCount=0;
-  const c=currentCase;const progress=getProgress();answerSubmitted=false;
+  const c=currentCase;const progress=getProgress();answerSubmitted=false;currentAnswerType=c.answerType||'suspect';
   const hintOptions=c.hints.map((_,i)=>`<option value="${i}">التلميح ${['الأول','الثاني','الثالث'][i] || (i+1)} — خصم ${(c.hintCosts?.[i] ?? [5,10,15][i] ?? 0)} نقاط</option>`).join('');
   dialogContent.innerHTML=`
     <div class="dialog-title-row"><div><div class="eyebrow">${escapeHTML(c.category)} · ${escapeHTML(c.difficulty)} · ${escapeHTML(c.duration)}</div><h2 id="dialogTitle">${escapeHTML(c.title)}</h2><p>اقرأ الملف بعناية. استخدم الأدلة لبناء تفسيرك، ولا تكشف الحل قبل تقديم إجابتك.</p></div><div class="case-number-large">${escapeHTML(c.id)}</div></div>
@@ -52,7 +53,7 @@ function openCase(id){
     <section class="file-section"><h3>الأدلة المرفقة</h3><div class="evidence-list">${c.evidence.map(e=>`<article class="evidence"><span class="evidence-number">${escapeHTML(e.n)}</span><div><strong>${escapeHTML(e.title)}</strong><p>${escapeHTML(e.detail)}</p></div></article>`).join('')}</div></section>
     <section class="file-section"><h3>الخط الزمني الأولي</h3><p>${escapeHTML(c.timeline)}</p></section>
     <section class="file-section"><h3>طلب تلميح</h3><div class="hint-box"><p>التلميحات تقلل نقاط نتيجتك. اختر المستوى الذي تحتاج إليه؛ سيظهر الخصم قبل عرض التلميح.</p><div class="hint-row"><select id="hintSelect" aria-label="اختر مستوى التلميح">${hintOptions}</select><button class="button button-outline" id="useHint">عرض التلميح</button></div><div class="hint-output" id="hintOutput"></div></div></section>
-    <section class="file-section"><h3>استنتاج المحقق</h3><div class="answer-form"><label for="answerSelect">من الشخص الذي ترى أن الأدلة تشير إليه؟</label><select id="answerSelect"><option value="">اختر استنتاجك...</option>${c.suspects.map(s=>`<option value="${escapeHTML(s.id)}">${escapeHTML(s.name)} — ${escapeHTML(s.role)}</option>`).join('')}</select><label for="reasoning">ما الدليل الأهم الذي يدعم استنتاجك؟</label><textarea id="reasoning" placeholder="اكتب تعليلًا مختصرًا يربط الدليل باستنتاجك..."></textarea><button class="button button-primary" id="submitAnswer">تثبيت الإجابة ومراجعتها</button><div class="result-box" id="answerResult" aria-live="polite"></div></div></section>
+    <section class="file-section"><h3>استنتاج المحقق</h3><div class="answer-form">${currentAnswerType==='open'?'<label for="openAnswer">اكتب استنتاجك أو السيناريو الذي تراه أقرب للأدلة</label><textarea id="openAnswer" placeholder="ما الذي حدث؟ أين التناقض؟ كيف نجح اللص؟"></textarea>':'<label for="answerSelect">من الشخص الذي ترى أن الأدلة تشير إليه؟</label><select id="answerSelect"><option value="">اختر استنتاجك...</option>${c.suspects.map(s=>`<option value="${escapeHTML(s.id)}">${escapeHTML(s.name)} — ${escapeHTML(s.role)}</option>`).join('')}</select>'}<label for="reasoning">ما الأدلة التي تدعم إجابتك؟</label><textarea id="reasoning" placeholder="اربط الأدلة باستنتاجك..."></textarea><button class="button button-primary" id="submitAnswer">تثبيت الإجابة ومراجعتها</button><div class="result-box" id="answerResult" aria-live="polite"></div></div></section>
     <section class="solution-panel" id="solutionPanel"><h3>الحل المرجعي وتحليل الأدلة</h3><p id="solutionText">لن يظهر الحل إلا بعد تثبيت إجابتك.</p></section>
     <div class="dialog-actions"><button class="subtle-button" id="resetCase">إعادة ضبط الإجابة</button><button class="button button-primary" id="revealSolution">كشف الحل بعد التأكيد</button></div>`;
   $('#dialogCaseNo').textContent=`ملف رقم ${escapeHTML(c.id)}`;
@@ -72,20 +73,20 @@ function useHint(){
   $('#hintOutput').textContent=`التلميح: ${escapeHTML(c.hints[index])} (خصم ${penalty} نقاط)`;$('#hintOutput').classList.add('visible');showToast(`تم عرض التلميح. مجموع خصم التلميحات: ${hintCount} نقطة.`);
 }
 async function submitAnswer(){
-  const c=currentCase;const selectedSuspectId=$('#answerSelect').value;const reasoning=$('#reasoning').value.trim();const result=$('#answerResult');
-  if(!selectedSuspectId){result.textContent='اختر اسم المشتبه به أولًا، ثم ثبّت الإجابة.';result.classList.add('visible');showToast('اختر استنتاجًا قبل تثبيت الإجابة.');$('#answerSelect').focus();return;}
+  const c=currentCase;const open=currentAnswerType==='open';const selectedSuspectId=open?null:$('#answerSelect').value;const openAnswer=open?$('#openAnswer').value.trim():'';const reasoning=$('#reasoning').value.trim();const result=$('#answerResult');
+  if(open?openAnswer.length<8:!selectedSuspectId){result.textContent=open?'اكتب إجابة من 8 أحرف على الأقل.':'اختر اسم الشخص أولًا، ثم ثبّت الإجابة.';result.classList.add('visible');showToast('أكمل الإجابة أولًا.');(open?$('#openAnswer'):$('#answerSelect')).focus();return;}
   if(reasoning.length<8){result.textContent='اكتب تعليلًا من 8 أحرف على الأقل حتى تُثبّت الإجابة.';result.classList.add('visible');showToast('أضف تعليلًا قصيرًا يوضح سبب اختيارك.');$('#reasoning').focus();return;}
   if(!supabase || !c.dbId){result.textContent='تعذر الاتصال بقاعدة البيانات أو أن القضية لا تحمل معرّفًا صالحًا.';result.classList.add('visible');showToast('اتصال قاعدة البيانات غير مُعدّ بعد. راجع ملف supabase-config.js.');return;}
   const submitButton=$('#submitAnswer');submitButton.disabled=true;submitButton.textContent='جارٍ مراجعة الإجابة…';
   try {
-    const {data,error}=await supabase.rpc('submit_case_answer',{p_case_id:c.dbId,p_suspect_id:selectedSuspectId});
+    const {data,error}=open?await supabase.rpc('submit_case_open_answer',{p_case_id:c.dbId,p_response:openAnswer,p_reasoning:reasoning}):await supabase.rpc('submit_case_answer',{p_case_id:c.dbId,p_suspect_id:selectedSuspectId});
     if(error) throw error;
     const resultRow=Array.isArray(data)?data[0]:data;
-    if(!resultRow || typeof resultRow.correct!=='boolean')throw new Error('لم تُرجع قاعدة البيانات نتيجة تحقق مفهومة. أعد تشغيل ملف supabase-setup.sql في SQL Editor.');
+    if(!resultRow || (!open&&typeof resultRow.correct!=='boolean'))throw new Error('لم تُرجع قاعدة البيانات نتيجة تحقق مفهومة. أعد تشغيل ملف supabase-setup.sql في SQL Editor.');
     answerSubmitted=true;const correct=Boolean(resultRow.correct);
-    result.innerHTML=`<strong>${correct?'إجابة صحيحة!':'إجابة غير مطابقة للحل المرجعي'}</strong><p>${correct?'أحسنت؛ لقد وصلت إلى الاستنتاج الصحيح.':'راجع تعليلك وقارن بين الأدلة قبل الانتقال إلى قضية أخرى.'}</p><p>النقاط المعروضة تجريبية وليست نتيجة تنافسية موثّقة على الخادم.</p>`;
+    result.innerHTML=open?'<strong>تم تثبيت إجابتك.</strong><p>الإجابة المفتوحة لا تُقيّم آليًا؛ قارن فكرتك بالإجابة المرجعية وتحليل الأدلة أدناه.</p>':'<strong>'+ (correct?'إجابة صحيحة!':'إجابة غير مطابقة للحل المرجعي')+'</strong><p>'+(correct?'أحسنت؛ لقد وصلت إلى الاستنتاج الصحيح.':'راجع تعليلك وقارن بين الأدلة قبل الانتقال إلى قضية أخرى.')+'</p>';
     result.classList.add('visible');
-    $('#solutionText').textContent=resultRow?.explanation || 'لا يتوفر تفسير منشور لهذه القضية بعد.';
+    $('#solutionText').textContent=open?((resultRow.expected_answer?'الإجابة المرجعية: '+resultRow.expected_answer+'\n\n':'')+(resultRow.explanation||'لا يتوفر تفسير إضافي لهذه القضية بعد.')):(resultRow?.explanation || 'لا يتوفر تفسير منشور لهذه القضية بعد.');
     $('#solutionPanel').classList.add('visible');
     $('#solutionPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
     const p=getProgress();if(!p.completed.includes(c.id))p.completed.push(c.id);saveProgress(p);renderCases();
@@ -106,14 +107,14 @@ async function initializeCases(){
     return;
   }
   const {data,error}=await supabase.from('cases').select(`
-    id, slug, title, category, difficulty, estimated_minutes, visual, summary, briefing, victim, timeline,
+    id, slug, title, category, answer_type, difficulty, estimated_minutes, visual, summary, briefing, victim, timeline,
     suspects(id, name, role, description, motive),
     evidence(id, evidence_number, title, description, sort_order),
     hints(id, content, points_cost, sort_order)
   `).eq('status','published').order('created_at',{ascending:false});
   if(error){console.error(error);caseGrid.innerHTML='<div class="empty-state">تعذر تحميل القضايا. تحقق من إعداد قاعدة البيانات والسياسات.</div>';return;}
   cases=(data||[]).map(row=>({
-    id:row.slug || row.id, dbId:row.id, title:row.title, category:row.category || 'لغز مغلق',
+    id:row.slug || row.id, dbId:row.id, title:row.title, category:row.category || 'لغز مغلق', answerType:row.answer_type||'suspect',
     difficulty:row.difficulty==='easy'?'سهل':row.difficulty==='hard'?'صعب':row.difficulty==='medium'?'متوسط':row.difficulty,
     duration:`${row.estimated_minutes || 15} دقيقة`, visual:row.visual || 'visual-night', summary:row.summary || '',
     briefing:row.briefing || '', victim:row.victim || '', timeline:row.timeline || '',
