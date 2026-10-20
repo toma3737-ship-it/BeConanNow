@@ -76,7 +76,7 @@
         <div><div class="eyebrow">لوحة القضايا</div><h2>اختر <em>ملفك التالي</em></h2><p>كل قضية عالم صغير من القرائن والتناقضات. مهمتك أن تكتشف ما لا يستقيم.</p></div>
         <div class="case-controls"><label class="search-box"><span aria-hidden="true">⌕</span><input id="caseSearch" type="search" placeholder="ابحث عن قضية..." aria-label="ابحث عن قضية"></label><select id="difficultyFilter" aria-label="تصفية حسب الصعوبة"><option value="all">كل المستويات</option><option value="سهل">سهل</option><option value="متوسط">متوسط</option><option value="صعب">صعب</option></select></div>
       </div>
-      <div class="case-grid" id="caseGrid" aria-live="polite"></div>
+      <div class="case-grid" id="caseGrid" aria-live="polite"><div class="empty-state">جارٍ تشغيل مكتبة القضايا…</div></div>
       <p class="demo-note"><span>ⓘ</span> هذه قضايا خيالية تجريبية صُممت لاختبار تجربة اللعب، وليست ملفات تحقيق حقيقية.</p>
     </section>
 
@@ -126,6 +126,6 @@
       window.addEventListener('pageshow', closeMenu);
     })();
   </script>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=20261020-cases-fix4"></script>
 </body>
 </html>

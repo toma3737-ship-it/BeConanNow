@@ -1,11 +1,13 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js';
 
+// The SDK is loaded inside initializeCases, after the page has rendered its loading state.
+// This prevents a slow/unavailable CDN from leaving the case library silently blank.
+let supabase = null;
+let supabaseLibraryError = null;
 const supabaseReady = SUPABASE_URL.startsWith('https://') &&
   !SUPABASE_URL.includes('YOUR_PROJECT') &&
   SUPABASE_PUBLISHABLE_KEY.length > 20 &&
   !SUPABASE_PUBLISHABLE_KEY.includes('YOUR_PUBLISHABLE_KEY');
-const supabase = supabaseReady ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
 
 let cases = [];
 
@@ -60,7 +62,7 @@ function openCase(id){
   $('#dialogCaseNo').textContent=`ملف رقم ${escapeHTML(c.id)}`;
   $('#useHint').addEventListener('click',useHint);
   $('#submitAnswer').addEventListener('click',submitAnswer);
-  $('#revealSolution').addEventListener('click',()=>{if(!answerSubmitted){showToast('لم ينجح تثبيت الإجابة بعد. راجع الرسالة أسفل نموذج الإجابة ثم حاول مجددًا.');(currentAnswerType==='open'?$('#openAnswer'):$('#answerSelect'))?.focus();return;} $('#solutionPanel.classList.add('visible');$('#solutionPanel').scrollIntoView({behavior:'smooth',block:'nearest'});});
+  $('#revealSolution').addEventListener('click',()=>{if(!answerSubmitted){showToast('لم ينجح تثبيت الإجابة بعد. راجع الرسالة أسفل نموذج الإجابة ثم حاول مجددًا.');(currentAnswerType==='open'?$('#openAnswer'):$('#answerSelect'))?.focus();return;} $('#solutionPanel').classList.add('visible');$('#solutionPanel').scrollIntoView({behavior:'smooth',block:'nearest'});});
   $('#resetCase').addEventListener('click',()=>{if(confirm('هل تريد مسح إجابتك الحالية وإعادة المحاولة؟')){const answerField=$('#openAnswer')||$('#answerSelect');if(answerField)answerField.value='';$('#reasoning').value='';$('#answerResult').classList.remove('visible');$('#solutionPanel').classList.remove('visible');answerSubmitted=false;hintCount=0;$('#hintOutput').classList.remove('visible');showToast('تمت إعادة ضبط نموذج الإجابة.');}});
   caseDialog.showModal();document.body.classList.add('dialog-open');
 }
@@ -102,12 +104,15 @@ $('#caseSearch').addEventListener('input',renderCases);$('#difficultyFilter').ad
 window.addEventListener('pageshow',()=>{renderCases();});
 $('#resumeBtn').addEventListener('click',()=>{const p=getProgress();const next=cases.find(c=>!p.completed.includes(c.id))||cases[0];openCase(next.id);});
 async function initializeCases(){
-  if(!supabase){
-    caseGrid.innerHTML='<div class="empty-state">أكمل إعداد الاتصال بقاعدة البيانات في ملف supabase-config.js لعرض القضايا المنشورة.</div>';
-    return;
-  }
+  if(!caseGrid){ console.error('Missing #caseGrid container'); return; }
   caseGrid.innerHTML='<div class="empty-state">جارٍ تحميل القضايا المنشورة…</div>';
   try {
+    if(!supabaseReady){
+      caseGrid.innerHTML='<div class="empty-state">أكمل إعداد الاتصال بقاعدة البيانات في ملف supabase-config.js لعرض القضايا المنشورة.</div>';
+      return;
+    }
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.118.0');
+    supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     // Fetch cases separately from related tables. This avoids a PostgREST embedded-relationship
     // error from hiding every case when the schema cache or a foreign-key relationship differs.
     const {data:rows,error}=await supabase.from('cases').select('*').eq('status','published').order('created_at',{ascending:false});
