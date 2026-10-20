@@ -27,7 +27,7 @@
 <div class="field"><label for="status">حالة القضية</label><select id="status"><option value="draft">مسودة</option><option value="published">منشورة</option></select></div>
 </div>
 <div class="item" id="suspectsSection"><div class="row"><h2>الأشخاص / المشتبه بهم (اختياري بحسب نوع القضية)</h2><button type="button" id="addSuspect">+ إضافة شخص</button></div><p class="muted tiny">يمكنك ترك هذا القسم فارغًا إذا كانت القضية لا تتطلب تحديد شخص.</p><div id="suspectsList"></div><div class="field"><label for="correctSuspect">الشخص الصحيح (يُطلب فقط عند اختيار نوع الإجابة: شخص)</label><select id="correctSuspect"><option value="">أضف الأشخاص أولًا</option></select></div></div>
-<div class="item"><div class="row"><h2>الأدلة</h2><button type="button" id="addEvidence">+ إضافة دليل</button></div><div id="evidenceList"></div></div>
+<div class="item"><div class="row"><h2>الأدلة</h2><button type="button" id="addEvidence">+ إضافة دليل</button></div><p class="muted tiny">يمكن إرفاق صورة أو ملف صوتي أو فيديو قصير بكل دليل. تُرفع الملفات إلى تخزين Supabase.</p><div id="evidenceList"></div></div>
 <div class="item"><div class="row"><h2>التلميحات</h2><button type="button" id="addHint">+ إضافة تلميح</button></div><div id="hintsList"></div></div>
 <div class="field full" id="expectedAnswerField"><label for="expectedAnswer">الإجابة المرجعية / السيناريو المتوقع (للإجابة المفتوحة)</label><textarea id="expectedAnswer" placeholder="اكتب الاستنتاج أو السيناريو الذي تتوقع الوصول إليه."></textarea></div>
 <div class="field full"><label for="solution">شرح الحل وتحليل الأدلة *</label><textarea id="solution" required placeholder="اشرح كيف ترتبط الأدلة بالاستنتاج الصحيح، أو لماذا يُعد هذا السيناريو هو الأقوى."></textarea></div>
