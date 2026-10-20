@@ -3,6 +3,29 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js';
 // The SDK is loaded inside initializeCases, after the page has rendered its loading state.
 // This prevents a slow/unavailable CDN from leaving the case library silently blank.
 let supabase = null;
+let supabasePromise = null;
+async function getSupabaseClient(){
+  if(supabase) return supabase;
+  if(!supabasePromise) supabasePromise = import('https://esm.sh/@supabase/supabase-js@2.118.0').then(({createClient}) => { supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY); return supabase; });
+  return supabasePromise;
+}
+async function fetchSupabaseTable(table, params){
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+      method: 'GET', signal: controller.signal,
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, Accept: 'application/json' }
+    });
+    const body = await response.text();
+    let data; try { data = body ? JSON.parse(body) : []; } catch { data = body; }
+    if(!response.ok) throw new Error(data?.message || data?.hint || `HTTP ${response.status} عند قراءة ${table}`);
+    return data;
+  } catch(error) {
+    if(error?.name === 'AbortError') throw new Error(`انتهت مهلة الاتصال بجدول ${table} بعد 15 ثانية. تحقق من اتصال الإنترنت أو إعدادات Supabase.`);
+    throw error;
+  } finally { clearTimeout(timeout); }
+}
 let supabaseLibraryError = null;
 const supabaseReady = SUPABASE_URL.startsWith('https://') &&
   !SUPABASE_URL.includes('YOUR_PROJECT') &&
@@ -79,9 +102,10 @@ async function submitAnswer(){
   const c=currentCase;const open=currentAnswerType==='open';const selectedSuspectId=open?null:$('#answerSelect').value;const openAnswer=open?$('#openAnswer').value.trim():'';const reasoning=$('#reasoning').value.trim();const result=$('#answerResult');
   if(open?openAnswer.length<8:!selectedSuspectId){result.textContent=open?'اكتب إجابة من 8 أحرف على الأقل.':'اختر اسم الشخص أولًا، ثم ثبّت الإجابة.';result.classList.add('visible');showToast('أكمل الإجابة أولًا.');(open?$('#openAnswer'):$('#answerSelect')).focus();return;}
   if(reasoning.length<8){result.textContent='اكتب تعليلًا من 8 أحرف على الأقل حتى تُثبّت الإجابة.';result.classList.add('visible');showToast('أضف تعليلًا قصيرًا يوضح سبب اختيارك.');$('#reasoning').focus();return;}
-  if(!supabase || !c.dbId){result.textContent='تعذر الاتصال بقاعدة البيانات أو أن القضية لا تحمل معرّفًا صالحًا.';result.classList.add('visible');showToast('اتصال قاعدة البيانات غير مُعدّ بعد. راجع ملف supabase-config.js.');return;}
+  if(!c.dbId){result.textContent='القضية لا تحمل معرّفًا صالحًا.';result.classList.add('visible');return;}
   const submitButton=$('#submitAnswer');submitButton.disabled=true;submitButton.textContent='جارٍ مراجعة الإجابة…';
   try {
+    await getSupabaseClient();
     const {data,error}=open?await supabase.rpc('submit_case_open_answer',{p_case_id:c.dbId,p_response:openAnswer,p_reasoning:reasoning}):await supabase.rpc('submit_case_answer',{p_case_id:c.dbId,p_suspect_id:selectedSuspectId});
     if(error) throw error;
     const resultRow=Array.isArray(data)?data[0]:data;
@@ -111,32 +135,28 @@ async function initializeCases(){
       caseGrid.innerHTML='<div class="empty-state">أكمل إعداد الاتصال بقاعدة البيانات في ملف supabase-config.js لعرض القضايا المنشورة.</div>';
       return;
     }
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.118.0');
-    supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-    // Fetch cases separately from related tables. This avoids a PostgREST embedded-relationship
-    // error from hiding every case when the schema cache or a foreign-key relationship differs.
-    const {data:rows,error}=await supabase.from('cases').select('*').eq('status','published').order('created_at',{ascending:false});
-    if(error) throw error;
+    // Use the Supabase REST endpoint for public case loading so a blocked or slow CDN
+    // importing the JavaScript SDK cannot leave the library stuck on its loading message.
+    const rows = await fetchSupabaseTable('cases', 'select=*&status=eq.published&order=created_at.desc');
     if(!rows || rows.length===0){
       cases=[];
       caseGrid.innerHTML='<div class="empty-state">لم تُرجع قاعدة البيانات أي قضايا منشورة. تحقّق من أن حالة القضية «منشورة» في لوحة الإدارة وأن سياسات القراءة العامة مطبّقة على جدول cases.</div>';
       return;
     }
     const ids=rows.map(r=>r.id).filter(Boolean);
-    const [suspectResult,evidenceResult,hintResult]=await Promise.all([
-      supabase.from('suspects').select('*').in('case_id',ids),
-      supabase.from('evidence').select('*').in('case_id',ids),
-      supabase.from('hints').select('*').in('case_id',ids)
-    ]);
-    // The case cards should remain visible even if a related-content table has a policy/schema issue.
+    // Load related data independently; case cards remain available if a detail table fails.
     const childWarnings=[];
-    if(suspectResult.error){console.error('Could not load suspects:',suspectResult.error);childWarnings.push('الأشخاص');}
-    if(evidenceResult.error){console.error('Could not load evidence:',evidenceResult.error);childWarnings.push('الأدلة');}
-    if(hintResult.error){console.error('Could not load hints:',hintResult.error);childWarnings.push('التلميحات');}
+    const inFilter = `select=*&case_id=in.(${ids.join(',')})`;
+    const childResults = await Promise.allSettled([
+      fetchSupabaseTable('suspects', inFilter),
+      fetchSupabaseTable('evidence', inFilter),
+      fetchSupabaseTable('hints', inFilter)
+    ]);
+    const childItems = childResults.map((r,i)=>{ if(r.status==='fulfilled') return r.value; console.error('Could not load related case data:',r.reason); childWarnings.push(['الأشخاص','الأدلة','التلميحات'][i]); return []; });
     const groupByCase=(items=[])=>items.reduce((acc,item)=>{(acc[item.case_id] ||= []).push(item);return acc;},{});
-    const suspectsByCase=groupByCase(suspectResult.data||[]);
-    const evidenceByCase=groupByCase(evidenceResult.data||[]);
-    const hintsByCase=groupByCase(hintResult.data||[]);
+    const suspectsByCase=groupByCase(childItems[0]);
+    const evidenceByCase=groupByCase(childItems[1]);
+    const hintsByCase=groupByCase(childItems[2]);
     cases=rows.map(row=>{
       const rowSuspects=(suspectsByCase[row.id]||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
       const rowEvidence=(evidenceByCase[row.id]||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
