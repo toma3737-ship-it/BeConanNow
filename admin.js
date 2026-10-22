@@ -7,11 +7,11 @@ function updateAnswerTypeUI(){const open=$('answerType').value==='open';$('corre
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function status(id,msg,error=false){$(id).textContent=msg;$(id).classList.toggle('error',error)}
 function showAdmin(user){currentUser=user;$('loginPanel').classList.add('hidden');$('adminPanel').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');$('userLabel').textContent=user.email||'مسؤول';refreshCases()}
-function addRow(type,data={}){const list=$(type+'List');const item=document.createElement('div');item.className='item';item.dataset.rowType=type;
+function addRow(type,data={}){const list=$(type+'List');const item=document.createElement('div');item.className='item';item.dataset.rowType=type;if(data.id)item.dataset.recordId=String(data.id);
  const fields=type==='suspects'?[['name','اسم المشتبه به','text'],['role','الصفة','text'],['description','الشهادة أو التفاصيل','textarea'],['motive','الدافع المحتمل','textarea']]:type==='evidence'?[['title','عنوان الدليل','text'],['description','تفاصيل الدليل','textarea']]:[['content','نص التلميح','textarea'],['points_cost','خصم النقاط','number']];
  item.innerHTML='<div class="row"><strong>'+({suspects:'مشتبه به',evidence:'دليل',hints:'تلميح'}[type])+'</strong><button type="button" class="danger remove">حذف</button></div><div class="grid">'+fields.map(([key,label,inputType])=>`<div class="field ${inputType==='textarea'?'full':''}"><label>${esc(label)}</label>${inputType==='textarea'?`<textarea data-field="${key}" ${key==='content'?'required':''}></textarea>`:`<input data-field="${key}" type="${inputType}" ${key==='name'||key==='title'?'required':''} ${key==='points_cost'?'min="0" value="0"':''}>`}</div>`).join('')+'</div>';
  if(type==='evidence'){const media=document.createElement('div');media.className='field full';media.innerHTML='<label>ملف مرفق (صورة أو صوت أو فيديو)</label><input type="file" data-media accept="image/*,audio/*,video/*,application/pdf"><small class="muted tiny">حد أقصى 50 ميغابايت. الصور والصوتيات والفيديوهات الشائعة مدعومة. اتركه فارغًا إن لم ترد إرفاق ملف.</small><div class="muted tiny" data-media-preview></div>';item.querySelector('.grid').appendChild(media);const fileInput=media.querySelector('[data-media]');fileInput.addEventListener('change',()=>{const f=fileInput.files[0];media.querySelector('[data-media-preview]').textContent=f?`الملف المختار: ${f.name} (${Math.round(f.size/1024)} كيلوبايت)`:(data.media_url?`الملف الحالي: ${data.media_url}`:'');});if(data.media_url)media.querySelector('[data-media-preview]').textContent=`الملف الحالي: ${data.media_url}`;} item.querySelector('.remove').addEventListener('click',()=>{item.remove();updateCorrectOptions()});item.querySelectorAll('input,textarea').forEach(el=>el.addEventListener('input',updateCorrectOptions));list.appendChild(item);for(const [key,value] of Object.entries(data)){const input=item.querySelector(`[data-field="${key}"]`);if(input)input.value=value??'';}updateCorrectOptions();}
-function rows(type){return [...$(type+'List').querySelectorAll('[data-row-type]')].map((el,index)=>{const v={sort_order:index};el.querySelectorAll('[data-field]').forEach(inp=>v[inp.dataset.field]=inp.value.trim());if(type==='hints')v.points_cost=Number(v.points_cost||0);if(type==='evidence'){v.evidence_number=String(index+1).padStart(2,'0');v.evidence_type='physical';v.media_url=el.dataset.mediaUrl||'';v.media_type=el.dataset.mediaType||''}return v})}
+function rows(type){return [...$(type+'List').querySelectorAll('[data-row-type]')].map((el,index)=>{const v={sort_order:index,id:el.dataset.recordId||null};el.querySelectorAll('[data-field]').forEach(inp=>v[inp.dataset.field]=inp.value.trim());if(type==='hints')v.points_cost=Number(v.points_cost||0);if(type==='evidence'){v.evidence_number=String(index+1).padStart(2,'0');v.evidence_type='physical';v.media_url=el.dataset.mediaUrl||'';v.media_type=el.dataset.mediaType||''}return v})}
 function updateCorrectOptions(){const select=$('correctSuspect');const old=select.value;const list=rows('suspects');select.innerHTML='<option value="">اختر الحل الصحيح</option>'+list.map((s,i)=>`<option value="${i}">${esc(s.name||`المشتبه به ${i+1}`)}</option>`).join('');if(old!==''&&Number(old)<list.length)select.value=old;}
 $('answerType').addEventListener('change',updateAnswerTypeUI);updateAnswerTypeUI();
 $('addSuspect').addEventListener('click',()=>addRow('suspects'));$('addEvidence').addEventListener('click',()=>addRow('evidence'));$('addHint').addEventListener('click',()=>addRow('hints'));
@@ -19,17 +19,104 @@ $('caseForm').addEventListener('reset',()=>setTimeout(()=>{editingCaseId=null;$(
 $('cancelEditBtn').addEventListener('click',()=>{$('caseForm').reset();status('adminStatus','تم إلغاء التعديل.');});
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();if(!supabase){status('loginStatus','أدخل عنوان Supabase وPublishable key في supabase-config.js أولًا.',true);return;}status('loginStatus','جارٍ تسجيل الدخول…');const {data,error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){status('loginStatus',error.message,true);return;}const {data:admin,error:adminError}=await supabase.from('admin_users').select('user_id').eq('user_id',data.user.id).maybeSingle();if(adminError||!admin){await supabase.auth.signOut();status('loginStatus','تم تسجيل الدخول لكن هذا الحساب غير مسجل كمسؤول في admin_users.',true);return;}showAdmin(data.user);status('loginStatus','تم تسجيل الدخول.');});
 $('logoutBtn').addEventListener('click',async()=>{if(supabase)await supabase.auth.signOut();currentUser=null;$('adminPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');status('loginStatus','تم تسجيل الخروج.')});
-$('caseForm').addEventListener('submit',async e=>{e.preventDefault();if(!supabase||!currentUser){status('adminStatus','سجّل الدخول أولًا.',true);return;}const answerType=$('answerType').value;const suspects=rows('suspects').filter(s=>s.name);const evidence=rows('evidence').filter(s=>s.title);const hints=rows('hints').filter(s=>s.content);if(answerType==='suspect'&&suspects.length<1){status('adminStatus','أضف شخصًا واحدًا على الأقل لأن نوع الإجابة يتطلب اختيار شخص.',true);return;}const correctIndex=Number($('correctSuspect').value);if(answerType==='suspect'&&(!Number.isInteger(correctIndex)||!suspects[correctIndex])){status('adminStatus','اختر الشخص الصحيح للحل.',true);return;}if(answerType==='open'&&!$('expectedAnswer').value.trim()){status('adminStatus','اكتب الإجابة المرجعية أو السيناريو المتوقع للقضية المفتوحة.',true);return;}const slug=$('slug').value.trim();if(!/^[a-z0-9-]+$/.test(slug)){status('adminStatus','المعرّف القصير يجب أن يحتوي حروفًا إنجليزية صغيرة وأرقامًا وشرطة فقط.',true);return;}
- $('saveCaseBtn').disabled=true;status('adminStatus',editingCaseId?'جارٍ حفظ التعديلات…':'جارٍ حفظ القضية…');
- try{const payload={slug,title:$('title').value.trim(),category:$('category').value.trim()||'لغز مغلق',answer_type:answerType,summary:$('summary').value.trim(),briefing:$('briefing').value.trim(),victim:$('victim').value.trim(),timeline:$('timeline').value.trim(),difficulty:$('difficulty').value,estimated_minutes:Number($('minutes').value),visual:$('visual').value,status:$('status').value};let caseId=editingCaseId;
- if(caseId){const {error}=await supabase.from('cases').update(payload).eq('id',caseId);if(error)throw error;for(const table of ['case_solutions','hints','evidence','suspects']){const {error:de}=await supabase.from(table).delete().eq('case_id',caseId);if(de)throw de;}}
- else{const {data,error}=await supabase.from('cases').insert(payload).select('id').single();if(error)throw error;caseId=data.id;}
- let savedSuspects=[];if(suspects.length){const {data,error:suspectError}=await supabase.from('suspects').insert(suspects.map(s=>({case_id:caseId,name:s.name,role:s.role||'',description:s.description||'',motive:s.motive||''}))).select('id,name');if(suspectError)throw suspectError;savedSuspects=data||[];}const correct=answerType==='suspect'?savedSuspects.find(s=>s.name===suspects[correctIndex].name):null;if(answerType==='suspect'&&!correct)throw new Error('تعذر ربط الإجابة الصحيحة بالشخص المحدد.');
- if(evidence.length){const evidencePayload=[];const evidenceEls=[...$('evidenceList').querySelectorAll('[data-row-type="evidence"]')].filter(el=>el.querySelector('[data-field="title"]').value.trim());for(let i=0;i<evidenceEls.length;i++){const el=evidenceEls[i],x=evidence[i],file=el.querySelector('[data-media]')?.files?.[0];let media_url=x.media_url||'',media_type=x.media_type||'';if(file){if(file.size>50*1024*1024)throw new Error('حجم الملف أكبر من 50 ميغابايت: '+file.name);if(!/^(image|audio|video)\//.test(file.type)&&file.type!=='application/pdf'&&file.type!=='application/octet-stream')throw new Error('نوع الملف غير مدعوم: '+file.name);const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`${caseId}/${crypto.randomUUID()}-${safeName}`;const {error:uploadError}=await supabase.storage.from('case-evidence').upload(path,file,{upsert:false,contentType:file.type});if(uploadError)throw new Error('تعذر رفع الملف المرفق. شغّل إعداد التخزين في ملف SQL ثم حاول مجددًا: '+uploadError.message);const {data:publicData}=supabase.storage.from('case-evidence').getPublicUrl(path);media_url=publicData.publicUrl;media_type=file.type;el.dataset.mediaUrl=media_url;el.dataset.mediaType=media_type;}evidencePayload.push({case_id:caseId,title:x.title,description:x.description||'',evidence_type:x.evidence_type,evidence_number:x.evidence_number,sort_order:x.sort_order,media_url,media_type});}const {error}=await supabase.from('evidence').insert(evidencePayload);if(error)throw error;}if(hints.length){const {error}=await supabase.from('hints').insert(hints.map(x=>({case_id:caseId,content:x.content,points_cost:x.points_cost,sort_order:x.sort_order})));if(error)throw error;}
- const {error:solutionError}=await supabase.from('case_solutions').insert({case_id:caseId,correct_suspect_id:correct?.id||null,expected_answer:$('expectedAnswer').value.trim(),explanation:$('solution').value.trim()});if(solutionError)throw solutionError;const wasEditing=Boolean(editingCaseId);editingCaseId=null;status('adminStatus',`${wasEditing?'تم تعديل':'تم حفظ'} القضية «${payload.title}» بنجاح. ${payload.status==='published'?'ستظهر على الموقع بعد تحديث الصفحة.':'حُفظت كمسودة ولن تظهر للاعبين بعد.'}`);$('caseForm').reset();await refreshCases();
- }catch(err){console.error(err);status('adminStatus','تعذر حفظ القضية: '+(err.message||String(err))+'. إذا حدث الخطأ أثناء التعديل، تحقق من سياسات الصلاحيات قبل إعادة المحاولة.',true);}finally{$('saveCaseBtn').disabled=false;}});
+$('caseForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ if(!supabase||!currentUser){status('adminStatus','سجّل الدخول أولًا.',true);return;}
+ const answerType=$('answerType').value;
+ const suspects=rows('suspects').filter(s=>s.name);
+ const evidence=rows('evidence').filter(s=>s.title);
+ const hints=rows('hints').filter(s=>s.content);
+ if(answerType==='suspect'&&suspects.length<1){status('adminStatus','أضف شخصًا واحدًا على الأقل لأن نوع الإجابة يتطلب اختيار شخص.',true);return;}
+ const correctIndex=Number($('correctSuspect').value);
+ if(answerType==='suspect'&&(!Number.isInteger(correctIndex)||!suspects[correctIndex])){status('adminStatus','اختر الشخص الصحيح للحل.',true);return;}
+ if(answerType==='open'&&!$('expectedAnswer').value.trim()){status('adminStatus','اكتب الإجابة المرجعية أو السيناريو المتوقع للقضية المفتوحة.',true);return;}
+ const slug=$('slug').value.trim();if(!/^[a-z0-9-]+$/.test(slug)){status('adminStatus','المعرّف القصير يجب أن يحتوي حروفًا إنجليزية صغيرة وأرقامًا وشرطة فقط.',true);return;}
+ $('saveCaseBtn').disabled=true;status('adminStatus',editingCaseId?'جارٍ حفظ التعديلات مع الحفاظ على روابط الإجابات السابقة…':'جارٍ حفظ القضية…');
+ try{
+  const payload={slug,title:$('title').value.trim(),category:$('category').value.trim()||'لغز مغلق',answer_type:answerType,summary:$('summary').value.trim(),briefing:$('briefing').value.trim(),victim:$('victim').value.trim(),timeline:$('timeline').value.trim(),difficulty:$('difficulty').value,estimated_minutes:Number($('minutes').value),visual:$('visual').value,status:$('status').value};
+  let caseId=editingCaseId;
+  let oldIds={suspects:[],evidence:[],hints:[]},hadSolution=false;
+  if(caseId){
+   const [os,oe,oh,ol]=await Promise.all([
+    supabase.from('suspects').select('id').eq('case_id',caseId),
+    supabase.from('evidence').select('id').eq('case_id',caseId),
+    supabase.from('hints').select('id').eq('case_id',caseId),
+    supabase.from('case_solutions').select('case_id').eq('case_id',caseId).maybeSingle()
+   ]);
+   for(const r of [os,oe,oh,ol])if(r.error)throw r.error;
+   oldIds={suspects:(os.data||[]).map(x=>String(x.id)),evidence:(oe.data||[]).map(x=>String(x.id)),hints:(oh.data||[]).map(x=>String(x.id))};hadSolution=Boolean(ol.data);
+   const {error}=await supabase.from('cases').update(payload).eq('id',caseId);if(error)throw error;
+  }else{
+   const {data,error}=await supabase.from('cases').insert(payload).select('id').single();if(error)throw error;caseId=data.id;
+  }
+
+  // Update existing suspects in place to preserve IDs referenced by past answers.
+  const savedSuspects=[];
+  for(const s of suspects){
+   const values={case_id:caseId,name:s.name,role:s.role||'',description:s.description||'',motive:s.motive||''};
+   let result;
+   if(s.id){result=await supabase.from('suspects').update(values).eq('id',s.id).eq('case_id',caseId).select('id,name').single();}
+   else{result=await supabase.from('suspects').insert(values).select('id,name').single();}
+   if(result.error)throw result.error;
+   savedSuspects.push(result.data);
+  }
+  const correct=answerType==='suspect'?savedSuspects[correctIndex]:null;
+  if(answerType==='suspect'&&!correct)throw new Error('تعذر ربط الإجابة الصحيحة بالشخص المحدد.');
+
+  // Reconcile evidence without wiping existing rows; preserve attachments unless a replacement is selected.
+  const evidenceEls=[...$('evidenceList').querySelectorAll('[data-row-type="evidence"]')].filter(el=>el.querySelector('[data-field="title"]').value.trim());
+  const keptEvidence=[];
+  for(let i=0;i<evidenceEls.length;i++){
+   const el=evidenceEls[i],x=evidence[i],file=el.querySelector('[data-media]')?.files?.[0];let media_url=x.media_url||'',media_type=x.media_type||'';
+   if(file){
+    if(file.size>50*1024*1024)throw new Error('حجم الملف أكبر من 50 ميغابايت: '+file.name);
+    if(!/^(image|audio|video)\//.test(file.type)&&file.type!=='application/pdf'&&file.type!=='application/octet-stream')throw new Error('نوع الملف غير مدعوم: '+file.name);
+    const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`${caseId}/${crypto.randomUUID()}-${safeName}`;
+    const {error:uploadError}=await supabase.storage.from('case-evidence').upload(path,file,{upsert:false,contentType:file.type});
+    if(uploadError)throw new Error('تعذر رفع الملف المرفق. شغّل إعداد التخزين في ملف SQL ثم حاول مجددًا: '+uploadError.message);
+    const {data:publicData}=supabase.storage.from('case-evidence').getPublicUrl(path);media_url=publicData.publicUrl;media_type=file.type;el.dataset.mediaUrl=media_url;el.dataset.mediaType=media_type;
+   }
+   const values={case_id:caseId,title:x.title,description:x.description||'',evidence_type:x.evidence_type,evidence_number:x.evidence_number,sort_order:x.sort_order,media_url,media_type};
+   let result;
+   if(x.id){result=await supabase.from('evidence').update(values).eq('id',x.id).eq('case_id',caseId).select('id').single();}
+   else{result=await supabase.from('evidence').insert(values).select('id').single();}
+   if(result.error)throw result.error;keptEvidence.push(String(result.data.id));
+  }
+
+  const keptHints=[];
+  for(const h of hints){
+   const values={case_id:caseId,content:h.content,points_cost:h.points_cost,sort_order:h.sort_order};let result;
+   if(h.id){result=await supabase.from('hints').update(values).eq('id',h.id).eq('case_id',caseId).select('id').single();}
+   else{result=await supabase.from('hints').insert(values).select('id').single();}
+   if(result.error)throw result.error;keptHints.push(String(result.data.id));
+  }
+
+  const solution={case_id:caseId,correct_suspect_id:correct?.id||null,expected_answer:$('expectedAnswer').value.trim(),explanation:$('solution').value.trim()};
+  let solutionResult;
+  if(editingCaseId&&hadSolution)solutionResult=await supabase.from('case_solutions').update({correct_suspect_id:solution.correct_suspect_id,expected_answer:solution.expected_answer,explanation:solution.explanation}).eq('case_id',caseId);
+  else solutionResult=await supabase.from('case_solutions').insert(solution);
+  if(solutionResult.error)throw solutionResult.error;
+
+  // Delete removed evidence/hints only after the replacement content has been saved.
+  for(const id of oldIds.evidence.filter(id=>!keptEvidence.includes(id))){const {error}=await supabase.from('evidence').delete().eq('id',id).eq('case_id',caseId);if(error)throw error;}
+  for(const id of oldIds.hints.filter(id=>!keptHints.includes(id))){const {error}=await supabase.from('hints').delete().eq('id',id).eq('case_id',caseId);if(error)throw error;}
+
+  // Removed suspects may be referenced by historical game answers. Never delete those references silently.
+  const keptSuspectIds=savedSuspects.map(s=>String(s.id));let retainedOldSuspects=0;
+  for(const id of oldIds.suspects.filter(id=>!keptSuspectIds.includes(id))){
+   const {error}=await supabase.from('suspects').delete().eq('id',id).eq('case_id',caseId);
+   if(error&&error.code==='23503'){retainedOldSuspects++;continue;}
+   if(error)throw error;
+  }
+  const wasEditing=Boolean(editingCaseId);editingCaseId=null;
+  const warning=retainedOldSuspects?` تنبيه: تعذّر حذف ${retainedOldSuspects} من المشتبه بهم المحذوفين من النموذج لأن إجابات سابقة مرتبطة بهم؛ احتُفظ بهم حفاظًا على سجل اللعب.`:'';
+  status('adminStatus',`${wasEditing?'تم تعديل':'تم حفظ'} القضية «${payload.title}» بنجاح. ${payload.status==='published'?'ستظهر على الموقع بعد تحديث الصفحة.':'حُفظت كمسودة ولن تظهر للاعبين بعد.'}${warning}`);
+  $('caseForm').reset();await refreshCases();
+ }catch(err){console.error(err);status('adminStatus','تعذّر حفظ القضية: '+(err.message||String(err))+'. لم نعد نحذف جميع الأدلة والحلول والمشتبه بهم عند التعديل، حفاظًا على روابط الإجابات السابقة.',true);}
+ finally{$('saveCaseBtn').disabled=false;}
+});
 async function refreshCases(){if(!supabase||!currentUser)return;const {data,error}=await supabase.from('cases').select('id,title,slug,status,created_at').order('created_at',{ascending:false}).limit(100);if(error){$('casesList').textContent='تعذر تحميل القائمة: '+error.message;return;}if(!data?.length){$('casesList').textContent='لا توجد قضايا بعد.';return;}$('casesList').innerHTML=data.map(c=>`<div class="item"><div class="row"><div><strong>${esc(c.title)}</strong><div class="muted tiny">${esc(c.slug)} · ${c.status==='published'?'منشورة':'مسودة'}</div></div><div class="actions"><button type="button" data-edit-case="${esc(c.id)}">تعديل</button><button type="button" class="danger" data-delete-case="${esc(c.id)}">حذف</button></div></div></div>`).join('');$('casesList').querySelectorAll('[data-edit-case]').forEach(b=>b.addEventListener('click',()=>loadCaseForEdit(b.dataset.editCase)));$('casesList').querySelectorAll('[data-delete-case]').forEach(b=>b.addEventListener('click',()=>deleteCase(b.dataset.deleteCase)));}
-async function loadCaseForEdit(id){status('adminStatus','جارٍ تحميل بيانات القضية للتعديل…');try{const [cr,sr,er,hr,solr]=await Promise.all([supabase.from('cases').select('*').eq('id',id).single(),supabase.from('suspects').select('*').eq('case_id',id),supabase.from('evidence').select('*').eq('case_id',id).order('sort_order',{ascending:true}),supabase.from('hints').select('*').eq('case_id',id).order('sort_order',{ascending:true}),supabase.from('case_solutions').select('*').eq('case_id',id).maybeSingle()]);for(const r of [cr,sr,er,hr,solr])if(r.error)throw r.error;const c=cr.data;editingCaseId=id;for(const [key,value] of Object.entries({title:c.title,slug:c.slug,category:c.category,summary:c.summary,briefing:c.briefing,victim:c.victim,timeline:c.timeline,difficulty:c.difficulty,minutes:c.estimated_minutes,visual:c.visual,status:c.status,solution:solr.data?.explanation||''}))if($(key))$(key).value=value??'';['suspects','evidence','hints'].forEach(k=>$(k+'List').innerHTML='');(sr.data||[]).forEach(x=>addRow('suspects',x));(er.data||[]).forEach(x=>{addRow('evidence',x);const el=$('evidenceList').lastElementChild;el.dataset.mediaUrl=x.media_url||'';el.dataset.mediaType=x.media_type||'';});(hr.data||[]).forEach(x=>addRow('hints',x));updateCorrectOptions();const idx=(sr.data||[]).findIndex(x=>x.id===solr.data?.correct_suspect_id);$('correctSuspect').value=idx>=0?String(idx):'';updateAnswerTypeUI();$('saveCaseBtn').textContent='حفظ التعديلات';$('cancelEditBtn').classList.remove('hidden');$('caseForm').scrollIntoView({behavior:'smooth',block:'start'});status('adminStatus','أصبحت القضية في وضع التعديل. احفظ التغييرات عند الانتهاء.');}catch(err){console.error(err);status('adminStatus','تعذر تحميل القضية للتعديل: '+(err.message||String(err)),true);}}
+async function loadCaseForEdit(id){status('adminStatus','جارٍ تحميل بيانات القضية للتعديل…');try{const [cr,sr,er,hr,solr]=await Promise.all([supabase.from('cases').select('*').eq('id',id).single(),supabase.from('suspects').select('*').eq('case_id',id),supabase.from('evidence').select('*').eq('case_id',id).order('sort_order',{ascending:true}),supabase.from('hints').select('*').eq('case_id',id).order('sort_order',{ascending:true}),supabase.from('case_solutions').select('*').eq('case_id',id).maybeSingle()]);for(const r of [cr,sr,er,hr,solr])if(r.error)throw r.error;const c=cr.data;editingCaseId=id;for(const [key,value] of Object.entries({title:c.title,slug:c.slug,category:c.category,answerType:c.answer_type,expectedAnswer:solr.data?.expected_answer||'',summary:c.summary,briefing:c.briefing,victim:c.victim,timeline:c.timeline,difficulty:c.difficulty,minutes:c.estimated_minutes,visual:c.visual,status:c.status,solution:solr.data?.explanation||''}))if($(key))$(key).value=value??'';['suspects','evidence','hints'].forEach(k=>$(k+'List').innerHTML='');(sr.data||[]).forEach(x=>addRow('suspects',x));(er.data||[]).forEach(x=>{addRow('evidence',x);const el=$('evidenceList').lastElementChild;el.dataset.mediaUrl=x.media_url||'';el.dataset.mediaType=x.media_type||'';});(hr.data||[]).forEach(x=>addRow('hints',x));updateCorrectOptions();const idx=(sr.data||[]).findIndex(x=>x.id===solr.data?.correct_suspect_id);$('correctSuspect').value=idx>=0?String(idx):'';updateAnswerTypeUI();$('saveCaseBtn').textContent='حفظ التعديلات';$('cancelEditBtn').classList.remove('hidden');$('caseForm').scrollIntoView({behavior:'smooth',block:'start'});status('adminStatus','أصبحت القضية في وضع التعديل. احفظ التغييرات عند الانتهاء.');}catch(err){console.error(err);status('adminStatus','تعذر تحميل القضية للتعديل: '+(err.message||String(err)),true);}}
 async function deleteCase(id){const c=await supabase.from('cases').select('title').eq('id',id).single();if(c.error){status('adminStatus','تعذر قراءة القضية: '+c.error.message,true);return;}if(!confirm(`هل أنت متأكد من حذف القضية «${c.data.title}» وجميع مشتملاتها؟ لا يمكن التراجع عن الحذف.`))return;try{for(const table of ['case_solutions','hints','evidence','suspects']){const {error}=await supabase.from(table).delete().eq('case_id',id);if(error)throw error;}const {error}=await supabase.from('cases').delete().eq('id',id);if(error)throw error;status('adminStatus',`تم حذف القضية «${c.data.title}» بنجاح.`);await refreshCases();}catch(err){console.error(err);status('adminStatus','تعذر حذف القضية: '+(err.message||String(err))+'. قد تحتاج صلاحيات الحذف إلى تحديث سياسات Supabase.',true);}}
 $('refreshCases').addEventListener('click',refreshCases);
 if(supabase){supabase.auth.getSession().then(async({data})=>{if(data.session?.user){const {data:admin}=await supabase.from('admin_users').select('user_id').eq('user_id',data.session.user.id).maybeSingle();if(admin)showAdmin(data.session.user);}})}else status('loginStatus','لم يُضبط اتصال Supabase بعد. افتح supabase-config.js وأضف URL وPublishable key.',true);
